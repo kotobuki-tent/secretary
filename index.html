@@ -31,7 +31,7 @@ h2.warn .n{background:#d33}h2.boss .n{background:#c60}
 .row{display:flex;gap:8px;align-items:flex-start;padding:3px 0;border-top:1px solid #f0f0f0}
 .row:first-of-type{border-top:0}
 .row input{margin-top:3px}.row .b{flex:1;min-width:0}.row .m{font-size:14px;color:#666}.row .s{margin:1px 0}
-.row.done .b{opacity:.45;text-decoration:line-through}
+.row.done .b{opacity:.55;text-decoration:line-through}.donehd{margin-top:8px;padding-top:6px;border-top:1px dashed #ccc;color:#1a7a3a}
 .tag{display:inline-block;font-size:13px;padding:0 5px;border-radius:3px;background:#eee;color:#444;margin-right:4px}
 .tag.rep{background:#e6f5ea;color:#1a7a3a}.tag.ask{background:#ede7ff;color:#5b3fb5}.bt{border:1px solid #5b3fb5;color:#5b3fb5;background:#fff;border-radius:4px;padding:1px 9px;font-size:13px;cursor:pointer;margin-left:6px}.tag.dout{background:#dbe8ff;color:#1a4aa0}.tag.din{background:#ffe4cc;color:#8a4a00}.tag.no{background:#fde8e8;color:#b22}.tag.due{background:#fff3d6;color:#8a5a00}
 a{color:#25a;text-decoration:none}
@@ -84,7 +84,7 @@ function sec(title,items,cls,opt){var live=items.filter(function(r){return !r.do
   if(opt&&opt.group){var g={};live.forEach(function(r){var k=r[opt.group]||'（なし）';(g[k]=g[k]||[]).push(r)});
     Object.keys(g).sort().forEach(function(k){h+='<div class="grp">'+esc(k)+'（'+g[k].length+'）</div>'+g[k].map(function(r){return row(r,opt)}).join('')})}
   else h+=live.length?live.map(function(r){return row(r,opt)}).join(''):'<p class="empty">なし</p>';
-  if(done.length)h+='<details><summary>完了 '+done.length+'</summary>'+done.map(function(r){return row(r,opt)}).join('')+'</details>';
+  if(done.length)h+='<div class="grp donehd">完了（'+done.length+'）</div>'+done.map(function(r){return row(r,opt)}).join('');
   return h+'</section>'}
 function moves(it,outs){var th={};
   it.forEach(function(r){var fn=(r.fromName||'').replace(/<.*/,'').replace(/"/g,'').trim();var co=(r.company||'').replace(/"/g,'').trim();var who=co;if(fn&&fn!==co&&fn.indexOf(co)<0&&co.indexOf(fn)<0)who+=' '+fn;(th[r.threadId]=th[r.threadId]||[]).push({d:r.date,dir:r.dir,who:who,to:r.person,text:r.summary,subject:r.subject,id:r.id,item:r})});
