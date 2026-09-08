@@ -79,6 +79,7 @@ function moves(it,outs){var th={};
     var line=(e.dir==='out'?'<span class="tag dout">こっちから</span>'+esc(e.who)+' → '+esc(e.to):'<span class="tag din">あっちから</span>'+esc(e.who)+(e.to?' → '+esc(e.to):''))+'：'+esc(e.text);
     var st='';if(lastIn&&lastIn.item&&lastIn.item.needsReply){st=lastIn.item.replied?'<span class="tag rep">返信済み</span>':'<span class="tag no">未返信</span>'}
     if(e.dir==='fax')st+='<span class="tag">FAX</span>';
+    if(e.item&&!e.item.classified)st+='<span class="tag">未分類</span>';
     h+='<div class="row"><div class="b"><div class="m">'+fmt(e.d)+(t.n>1?' ・'+t.n+'通':'')+' <a target="_blank" href="'+gl(e.id)+'">'+esc(e.subject||'(件名なし)')+'</a> '+st+'</div><div class="s">'+line+'</div></div></div>'});
   return h+'</section>'}
 function render(){var sd=new Date();sd.setDate(sd.getDate()-(DAYS-1));sd.setHours(0,0,0,0);D.since=sd.toISOString();var it=D.items.filter(function(r){return r.date>=D.since}),all=D.items;var h='';
