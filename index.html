@@ -17,13 +17,16 @@ header .sel button{border:1px solid #bbb;background:#fff;padding:4px 10px;border
 header .sel button.on{background:#222;color:#fff;border-color:#222}
 header .st{color:#777;font-size:14px;margin-left:auto}
 header .sync{border:1px solid #2b6;color:#2b6;background:#fff;padding:4px 10px;border-radius:4px;cursor:pointer}
-main{max-width:1100px;margin:0 auto;padding:10px 12px 60px}
+main{max-width:1700px;margin:0 auto;padding:10px 12px 60px}
+.cols{display:grid;grid-template-columns:1fr;gap:0 14px}
+@media(min-width:1100px){.cols{grid-template-columns:1.25fr 1fr}}
+.mv{padding:4px 0;border-top:1px solid #f0f0f0;line-height:1.5}.mv:first-of-type{border-top:0}.mv .t{color:#888;font-size:14px;margin-right:4px}.mv .sub{color:#888;font-size:14px}.mv .sub a{color:#25a}
 section{background:#fff;border:1px solid #e3e3e3;border-radius:6px;margin:10px 0;padding:8px 12px}
 h2{font-size:17px;margin:0 0 6px;display:flex;align-items:center;gap:6px}
 h2 .n{background:#222;color:#fff;border-radius:11px;padding:0 8px;font-size:14px}
 h2.warn .n{background:#d33}h2.boss .n{background:#c60}
 .grp{color:#555;font-size:14px;margin:6px 0 2px}
-.row{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-top:1px solid #f0f0f0}
+.row{display:flex;gap:8px;align-items:flex-start;padding:3px 0;border-top:1px solid #f0f0f0}
 .row:first-of-type{border-top:0}
 .row input{margin-top:3px}.row .b{flex:1;min-width:0}.row .m{font-size:14px;color:#666}.row .s{margin:1px 0}
 .row.done .b{opacity:.45;text-decoration:line-through}
@@ -80,11 +83,12 @@ function moves(it,outs){var th={};
     var st='';if(lastIn&&lastIn.item&&lastIn.item.needsReply){st=lastIn.item.replied?'<span class="tag rep">返信済み</span>':'<span class="tag no">未返信</span>'}
     if(e.dir==='fax')st+='<span class="tag">FAX</span>';
     if(e.item&&!e.item.classified)st+='<span class="tag">未分類</span>';
-    h+='<div class="row"><div class="b"><div class="m">'+fmt(e.d)+(t.n>1?' ・'+t.n+'通':'')+' <a target="_blank" href="'+gl(e.id)+'">'+esc(e.subject||'(件名なし)')+'</a> '+st+'</div><div class="s">'+line+'</div></div></div>'});
+    h+='<div class="mv"><span class="t">'+fmt(e.d)+(t.n>1?'・'+t.n+'通':'')+'</span>'+line+' <span class="sub">— <a target="_blank" href="'+gl(e.id)+'">'+esc(e.subject||'(件名なし)')+'</a></span> '+st+'</div>'});
   return h+'</section>'}
 function render(){var sd=new Date();sd.setDate(sd.getDate()-(DAYS-1));sd.setHours(0,0,0,0);D.since=sd.toISOString();var it=D.items.filter(function(r){return r.date>=D.since}),all=D.items;var h='';
   h+=moves(it,D.outs.filter(function(o){return o.date>=D.since}));
   var q=it.filter(function(r){return r.kind==='見積依頼'});var cc={};q.forEach(function(r){cc[r.company]=(cc[r.company]||0)+1});
+  var hl=h;h='';
   h+=sec('見積依頼 '+Object.keys(cc).map(function(k){return esc(k)+' '+cc[k]}).join('・'),q,'',{group:'company',nokind:true});
   h+=sec('未返信（相手が答えを待っている）',all.filter(function(r){return r.needsReply&&!r.replied&&r.kind!=='FAX'}),'warn');
   h+=sec('社長案件',all.filter(function(r){return r.boss}),'boss');
@@ -93,8 +97,9 @@ function render(){var sd=new Date();sd.setDate(sd.getDate()-(DAYS-1));sd.setHour
   var pc={};it.forEach(function(r){if(r.dir==='fax')return;var p=r.person||'なし';pc[p]=(pc[p]||0)+1});
   var outs=D.outs.filter(function(o){return o.date>=D.since});var sent={};outs.forEach(function(o){var b=o.by||'無記名';sent[b]=(sent[b]||0)+1});
   h+='<section><h2>件数</h2><div class="cnt">受信 '+it.filter(function(r){return r.dir!=='fax'}).length+'件（宛名別: '+Object.keys(pc).sort(function(a,b){return pc[b]-pc[a]}).map(function(k){return esc(k)+' '+pc[k]}).join('・')+'）<br>kt-info発 '+outs.length+'件（'+Object.keys(sent).map(function(k){return esc(k)+' '+sent[k]}).join('・')+'）</div></section>';
-  h+='<section><details><summary>受信すべて（期間内 '+it.length+'件）</summary>'+it.slice().reverse().map(function(r){return row(r)}).join('')+'</details></section>';
-  document.getElementById('main').innerHTML=h;
+  var hr=h;
+  hl+='<section><details><summary>受信すべて（期間内 '+it.length+'件）</summary>'+it.slice().reverse().map(function(r){return row(r)}).join('')+'</details></section>';
+  document.getElementById('main').innerHTML='<div class="cols"><div>'+hl+'</div><div>'+hr+'</div></div>';
   document.getElementById('st').textContent='更新 '+(D.lastSync?fmt(D.lastSync):'未')}
 function load(){
   if(!K){document.getElementById('main').innerHTML='<p class="empty">キーがありません（URL に ?k= を付けて開いてください）</p>';return}
