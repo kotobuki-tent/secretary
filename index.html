@@ -33,7 +33,7 @@ h2.warn .n{background:#d33}h2.boss .n{background:#c60}
 .row input{margin-top:3px}.row .b{flex:1;min-width:0}.row .m{font-size:14px;color:#666}.row .s{margin:1px 0}
 .row.done .b{opacity:.45;text-decoration:line-through}
 .tag{display:inline-block;font-size:13px;padding:0 5px;border-radius:3px;background:#eee;color:#444;margin-right:4px}
-.tag.rep{background:#e6f5ea;color:#1a7a3a}.tag.dout{background:#dbe8ff;color:#1a4aa0}.tag.din{background:#ffe4cc;color:#8a4a00}.tag.no{background:#fde8e8;color:#b22}.tag.due{background:#fff3d6;color:#8a5a00}
+.tag.rep{background:#e6f5ea;color:#1a7a3a}.tag.ask{background:#ede7ff;color:#5b3fb5}.bt{border:1px solid #5b3fb5;color:#5b3fb5;background:#fff;border-radius:4px;padding:1px 9px;font-size:13px;cursor:pointer;margin-left:6px}.tag.dout{background:#dbe8ff;color:#1a4aa0}.tag.din{background:#ffe4cc;color:#8a4a00}.tag.no{background:#fde8e8;color:#b22}.tag.due{background:#fff3d6;color:#8a5a00}
 a{color:#25a;text-decoration:none}
 .cnt{font-size:16px;color:#444;line-height:1.7}
 details summary{cursor:pointer;color:#666;font-size:15px}
@@ -71,7 +71,14 @@ function row(r,opt){opt=opt||{};var t='';
   if(!r.classified)t+='<span class="tag">未分類</span>';
   return '<div class="row'+(r.done?' done':'')+'"><input type="checkbox" '+(r.done?'checked':'')+' onchange="toggle(\''+r.id+'\',this.checked)"><div class="b">'+
     '<div class="m">'+fmt(r.date)+' '+esc(r.company)+(r.fromName&&r.company!==r.fromName?' '+esc(r.fromName.replace(/<.*/,'')):'')+(r.person?' → '+esc(r.person):'')+' '+ml(r.id,r.subject)+'</div>'+
-    '<div class="s">'+esc(r.summary)+'</div>'+(opt.ask&&r.ask?'<div class="m">確認: '+esc(r.ask)+'</div>':'')+'<div>'+t+'</div></div></div>'}
+    '<div class="s">'+esc(r.summary)+'</div>'+(opt.ask&&r.ask?'<div class="m">確認: '+esc(r.ask)+'</div>':'')+'<div>'+t+(opt.ask?askTags(r):'')+'</div></div></div>'}
+function askTags(r){var a=(D.asks||{})[r.id];var h='';
+  if(a){h+='<span class="tag ask">聞いた '+fmt(a.askedAt)+'</span>';if(a.answer)h+='<span class="tag rep">'+esc(a.person)+'：'+esc(a.answer)+' '+fmt(a.answeredAt)+'</span>'}
+  if(r.person&&!r.done)h+='<button class="bt" onclick="askNow(\''+r.id+'\',this)">'+(a?'もう一度聞く':'聞く')+'</button>';return h}
+function askNow(id,btn){btn.disabled=true;btn.textContent='送信中…';
+  fetch(API+'?k='+encodeURIComponent(K)+'&a=ask&id='+encodeURIComponent(id)).then(function(r){return r.json()}).then(function(j){
+    if(j.error){alert(j.error);btn.disabled=false;btn.textContent='聞く';return}
+    D.asks=D.asks||{};D.asks[id]={person:j.person,askedAt:j.askedAt,answer:'',answeredAt:''};render()}).catch(function(e){alert('失敗 '+e.message);btn.disabled=false;btn.textContent='聞く'})}
 function sec(title,items,cls,opt){var live=items.filter(function(r){return !r.done}),done=items.filter(function(r){return r.done});
   var h='<section><h2 class="'+(cls||'')+'">'+title+'<span class="n">'+live.length+'</span></h2>';
   if(opt&&opt.group){var g={};live.forEach(function(r){var k=r[opt.group]||'（なし）';(g[k]=g[k]||[]).push(r)});
