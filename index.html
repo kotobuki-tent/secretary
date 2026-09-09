@@ -59,7 +59,7 @@ var DAYS=3,D=null;
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function fmt(d){d=new Date(d);return (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}
 function ago(d){var h=(Date.now()-new Date(d))/36e5;return h<1?Math.round(h*60)+'分':h<48?Math.round(h)+'時間':Math.round(h/24)+'日'}
-function ml(id,subject){return '<a class="ml" onclick="openMail(\''+id+'\')">'+esc(subject||'(件名なし)')+'</a>'}
+function ml(id,subject){if(String(id).indexOf('fax-')===0)return '<span>'+esc(subject||'FAX')+'</span>';return '<a class="ml" onclick="openMail(\''+id+'\')">'+esc(subject||'(件名なし)')+'</a>'}
 function openMail(id){var ov=document.getElementById('ov');document.getElementById('ovh').textContent='読み込み中…';document.getElementById('ovb').textContent='';ov.classList.add('on');
   fetch(API+'?k='+encodeURIComponent(K)+'&a=mail&id='+encodeURIComponent(id)).then(function(r){return r.json()}).then(function(m){
     document.getElementById('ovh').textContent=(m.subject||'(件名なし)')+'\n'+fmt(m.date)+'  '+(m.from||'')+'\n→ '+(m.to||'')+(m.cc?'\ncc '+m.cc:'')+(m.attachments&&m.attachments.length?'\n添付: '+m.attachments.join(', '):'');
