@@ -20,7 +20,7 @@ header .sync{border:1px solid #2b6;color:#2b6;background:#fff;padding:4px 10px;b
 main{max-width:1700px;margin:0 auto;padding:10px 12px 60px}
 .cols{display:grid;grid-template-columns:1fr;gap:0 14px}
 @media(min-width:1100px){.cols{grid-template-columns:1.25fr 1fr}}
-.card{border:1px solid #e4e4e4;border-radius:6px;padding:6px 10px;margin:6px 0;background:#fbfbfb;line-height:1.45}.card .t{color:#888;font-size:14px}.card .who{margin:1px 0}.card .s{margin:1px 0}.card .sub{font-size:14px}.card .sub a{color:#25a}
+.card{position:relative;border:1px solid #e4e4e4;border-radius:6px;padding:6px 34px 6px 10px;margin:6px 0;background:#fbfbfb;line-height:1.45}.card .x{position:absolute;top:6px;right:8px;border:1px solid #ccc;background:#fff;color:#888;border-radius:4px;font-size:13px;line-height:1;padding:3px 6px;cursor:pointer}.card .x:hover{color:#c33;border-color:#c33}.back{border:1px solid #aaa;background:#fff;border-radius:4px;font-size:13px;padding:2px 7px;cursor:pointer;margin-right:4px}.card .t{color:#888;font-size:14px}.card .who{margin:1px 0}.card .s{margin:1px 0}.card .sub{font-size:14px}.card .sub a{color:#25a}
 #ov{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:9;align-items:flex-start;justify-content:center;padding:30px 10px}#ov.on{display:flex}#ov .bx{background:#fff;max-width:900px;width:100%;max-height:90vh;overflow:auto;border-radius:8px;padding:14px 18px;box-shadow:0 8px 30px rgba(0,0,0,.25)}#ov .hd{font-size:14px;color:#666;margin-bottom:8px;white-space:pre-wrap}#ov .bd{white-space:pre-wrap;font-size:16px}#ov .x{float:right;border:1px solid #bbb;background:#fff;border-radius:4px;padding:2px 10px;cursor:pointer}
 a.ml{cursor:pointer}
 section{background:#fff;border:1px solid #e3e3e3;border-radius:6px;margin:10px 0;padding:8px 12px}
@@ -86,7 +86,7 @@ function sec(title,items,cls,opt){var live=items.filter(function(r){return !r.do
   else h+=live.length?live.map(function(r){return row(r,opt)}).join(''):'<p class="empty">なし</p>';
   if(done.length)h+='<div class="grp donehd">完了（'+done.length+'）</div>'+done.map(function(r){return row(r,opt)}).join('');
   return h+'</section>'}
-var NOISE=function(r){return r.kind==='営業'||r.kind==='自動応答'};
+var NOISE=function(r){return r.kind==='営業'||r.kind==='自動応答'};var HID=function(r){return r.kind==='非表示'};
 function moves(it,outs){var th={};
   it=it.filter(function(r){return !NOISE(r)});
   it.forEach(function(r){var fn=(r.fromName||'').replace(/<.*/,'').replace(/"/g,'').trim();var co=(r.company||'').replace(/"/g,'').trim();var who=co;if(fn&&fn!==co&&fn.indexOf(co)<0&&co.indexOf(fn)<0)who+=' '+fn;(th[r.threadId]=th[r.threadId]||[]).push({d:r.date,dir:r.dir,who:who,to:r.person,text:r.summary,subject:r.subject,id:r.id,item:r})});
@@ -99,10 +99,11 @@ function moves(it,outs){var th={};
     var st='';if(lastIn&&lastIn.item&&lastIn.item.needsReply){st=lastIn.item.replied?'<span class="tag rep">返信済み</span>':'<span class="tag no">未返信</span>'}
     if(e.dir==='fax')st+='<span class="tag">FAX</span>';
     if(e.item&&!e.item.classified)st+='<span class="tag">未分類</span>';
-    h+='<div class="card"><div class="t">'+fmt(e.d)+(t.n>1?'・'+t.n+'通':'')+' '+st+'</div><div class="who">'+who+'</div><div class="s">'+esc(e.text)+'</div><div class="sub">'+ml(e.id,e.subject)+'</div></div>'});
+    var ids=t.ev.map(function(x){return x.id});
+    h+='<div class="card"><button class="x" title="この件を非表示" onclick="hide('+JSON.stringify(ids).replace(/"/g,'&quot;')+',true)">✕</button><div class="t">'+fmt(e.d)+(t.n>1?'・'+t.n+'通':'')+' '+st+'</div><div class="who">'+who+'</div><div class="s">'+esc(e.text)+'</div><div class="sub">'+ml(e.id,e.subject)+'</div></div>'});
   return h+'</section>'}
-function render(){var sd=new Date();sd.setDate(sd.getDate()-(DAYS-1));sd.setHours(0,0,0,0);D.since=sd.toISOString();var it=D.items.filter(function(r){return r.date>=D.since}),all=D.items;var h='';
-  h+=moves(it,D.outs.filter(function(o){return o.date>=D.since}));
+function render(){var sd=new Date();sd.setDate(sd.getDate()-(DAYS-1));sd.setHours(0,0,0,0);D.since=sd.toISOString();var it=D.items.filter(function(r){return r.date>=D.since&&!HID(r)}),all=D.items.filter(function(r){return !HID(r)});var h='';
+  h+=moves(it,D.outs.filter(function(o){return o.date>=D.since&&!HID(o)}));
   var q=it.filter(function(r){return r.kind==='見積依頼'});var cc={};q.forEach(function(r){cc[r.company]=(cc[r.company]||0)+1});
   var hl=h;h='';
   h+=sec('見積依頼 '+Object.keys(cc).map(function(k){return esc(k)+' '+cc[k]}).join('・'),q,'',{group:'company',nokind:true});
@@ -111,11 +112,13 @@ function render(){var sd=new Date();sd.setDate(sd.getDate()-(DAYS-1));sd.setHour
   h+=sec('各自に確認',all.filter(function(r){return r.ask&&!(r.needsReply&&r.replied)}),'',{group:'person',ask:true});
   h+=sec('FAX',it.filter(function(r){return r.dir==='fax'}),'',{nokind:true});
   var pc={};it.forEach(function(r){if(r.dir==='fax'||NOISE(r))return;var p=r.person||'なし';pc[p]=(pc[p]||0)+1});
-  var outs=D.outs.filter(function(o){return o.date>=D.since});var sent={};outs.forEach(function(o){var b=o.by||'無記名';sent[b]=(sent[b]||0)+1});
+  var outs=D.outs.filter(function(o){return o.date>=D.since&&!HID(o)});var sent={};outs.forEach(function(o){var b=o.by||'無記名';sent[b]=(sent[b]||0)+1});
   h+='<section><h2>件数</h2><div class="cnt">受信 '+it.filter(function(r){return r.dir!=='fax'&&!NOISE(r)}).length+'件（宛名別: '+Object.keys(pc).sort(function(a,b){return pc[b]-pc[a]}).map(function(k){return esc(k)+' '+pc[k]}).join('・')+'）<br>kt-info発 '+outs.length+'件（'+Object.keys(sent).map(function(k){return esc(k)+' '+sent[k]}).join('・')+'）</div></section>';
   var hr=h;
   var noise=it.filter(NOISE);
   hl+='<section><details><summary>営業・自動応答（'+noise.length+'件）</summary>'+noise.slice().reverse().map(function(r){return row(r)}).join('')+'</details></section>';
+  var hid=D.items.concat(D.outs).filter(HID).sort(function(a,b){return a.date<b.date?1:-1});
+  hl+='<section><details><summary>非表示にしたもの（'+hid.length+'件）</summary>'+(hid.length?hid.map(function(r){return '<div class="row"><button class="back" onclick="hide(['+JSON.stringify(r.id).replace(/"/g,'&quot;')+'],false)">戻す</button> '+fmt(r.date)+' '+esc(r.company||r.by||'')+' '+esc((r.subject||'').slice(0,40))+'</div>'}).join(''):'<p class="empty">なし</p>')+'</details></section>';
   hl+='<section><details><summary>受信すべて（期間内 '+it.length+'件）</summary>'+it.slice().reverse().map(function(r){return row(r)}).join('')+'</details></section>';
   document.getElementById('main').innerHTML='<div class="cols"><div>'+hl+'</div><div>'+hr+'</div></div>';
   document.getElementById('st').textContent='更新 '+(D.lastSync?fmt(D.lastSync):'未')}
@@ -126,6 +129,8 @@ function load(){
     D=d;render()}).catch(function(e){document.getElementById('main').innerHTML='<p class="empty">エラー: '+esc(e.message)+'</p>'})}
 function toggle(id,f){var r=D.items.filter(function(x){return x.id===id})[0];if(r){r.done=f;render()}
   fetch(API,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain'},body:JSON.stringify({k:K,action:'done',id:id,flag:f})})}
+function hide(ids,f){D.items.concat(D.outs).forEach(function(r){if(ids.indexOf(r.id)>=0)r.kind=f?'非表示':''});render();
+  fetch(API,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain'},body:JSON.stringify({k:K,action:'hide',ids:ids,flag:f})})}
 function syncNow(){document.getElementById('st').textContent='取得中…';
   fetch(API+'?k='+encodeURIComponent(K)+'&a=sync').then(function(){load()}).catch(function(e){document.getElementById('st').textContent='失敗 '+e.message})}
 document.querySelectorAll('.sel button').forEach(function(b){b.onclick=function(){DAYS=Number(b.dataset.d);document.querySelectorAll('.sel button').forEach(function(x){x.classList.toggle('on',x===b)});load()}});
