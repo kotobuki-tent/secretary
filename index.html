@@ -86,7 +86,9 @@ function sec(title,items,cls,opt){var live=items.filter(function(r){return !r.do
   else h+=live.length?live.map(function(r){return row(r,opt)}).join(''):'<p class="empty">なし</p>';
   if(done.length)h+='<div class="grp donehd">完了（'+done.length+'）</div>'+done.map(function(r){return row(r,opt)}).join('');
   return h+'</section>'}
+var NOISE=function(r){return r.kind==='営業'||r.kind==='自動応答'};
 function moves(it,outs){var th={};
+  it=it.filter(function(r){return !NOISE(r)});
   it.forEach(function(r){var fn=(r.fromName||'').replace(/<.*/,'').replace(/"/g,'').trim();var co=(r.company||'').replace(/"/g,'').trim();var who=co;if(fn&&fn!==co&&fn.indexOf(co)<0&&co.indexOf(fn)<0)who+=' '+fn;(th[r.threadId]=th[r.threadId]||[]).push({d:r.date,dir:r.dir,who:who,to:r.person,text:r.summary,subject:r.subject,id:r.id,item:r})});
   outs.forEach(function(o){(th[o.threadId]=th[o.threadId]||[]).push({d:o.date,dir:'out',who:o.by||'無記名',to:o.company,text:(o.summary||'').slice(0,50),subject:o.subject,id:o.id})});
   var list=Object.keys(th).map(function(k){var ev=th[k].sort(function(a,b){return a.d<b.d?-1:1});return {last:ev[ev.length-1],n:ev.length,ev:ev}}).sort(function(a,b){return a.last.d<b.last.d?1:-1});
@@ -104,14 +106,16 @@ function render(){var sd=new Date();sd.setDate(sd.getDate()-(DAYS-1));sd.setHour
   var q=it.filter(function(r){return r.kind==='見積依頼'});var cc={};q.forEach(function(r){cc[r.company]=(cc[r.company]||0)+1});
   var hl=h;h='';
   h+=sec('見積依頼 '+Object.keys(cc).map(function(k){return esc(k)+' '+cc[k]}).join('・'),q,'',{group:'company',nokind:true});
-  h+=sec('未返信（相手が答えを待っている）',all.filter(function(r){return r.needsReply&&!r.replied&&r.kind!=='FAX'}),'warn');
+  h+=sec('未返信（相手が答えを待っている）',all.filter(function(r){return r.needsReply&&!r.replied&&r.kind!=='FAX'&&!NOISE(r)}),'warn');
   h+=sec('社長案件',all.filter(function(r){return r.boss}),'boss');
   h+=sec('各自に確認',all.filter(function(r){return r.ask&&!(r.needsReply&&r.replied)}),'',{group:'person',ask:true});
   h+=sec('FAX',it.filter(function(r){return r.dir==='fax'}),'',{nokind:true});
-  var pc={};it.forEach(function(r){if(r.dir==='fax')return;var p=r.person||'なし';pc[p]=(pc[p]||0)+1});
+  var pc={};it.forEach(function(r){if(r.dir==='fax'||NOISE(r))return;var p=r.person||'なし';pc[p]=(pc[p]||0)+1});
   var outs=D.outs.filter(function(o){return o.date>=D.since});var sent={};outs.forEach(function(o){var b=o.by||'無記名';sent[b]=(sent[b]||0)+1});
-  h+='<section><h2>件数</h2><div class="cnt">受信 '+it.filter(function(r){return r.dir!=='fax'}).length+'件（宛名別: '+Object.keys(pc).sort(function(a,b){return pc[b]-pc[a]}).map(function(k){return esc(k)+' '+pc[k]}).join('・')+'）<br>kt-info発 '+outs.length+'件（'+Object.keys(sent).map(function(k){return esc(k)+' '+sent[k]}).join('・')+'）</div></section>';
+  h+='<section><h2>件数</h2><div class="cnt">受信 '+it.filter(function(r){return r.dir!=='fax'&&!NOISE(r)}).length+'件（宛名別: '+Object.keys(pc).sort(function(a,b){return pc[b]-pc[a]}).map(function(k){return esc(k)+' '+pc[k]}).join('・')+'）<br>kt-info発 '+outs.length+'件（'+Object.keys(sent).map(function(k){return esc(k)+' '+sent[k]}).join('・')+'）</div></section>';
   var hr=h;
+  var noise=it.filter(NOISE);
+  hl+='<section><details><summary>営業・自動応答（'+noise.length+'件）</summary>'+noise.slice().reverse().map(function(r){return row(r)}).join('')+'</details></section>';
   hl+='<section><details><summary>受信すべて（期間内 '+it.length+'件）</summary>'+it.slice().reverse().map(function(r){return row(r)}).join('')+'</details></section>';
   document.getElementById('main').innerHTML='<div class="cols"><div>'+hl+'</div><div>'+hr+'</div></div>';
   document.getElementById('st').textContent='更新 '+(D.lastSync?fmt(D.lastSync):'未')}
