@@ -107,9 +107,9 @@ function render(){var sd=new Date();sd.setDate(sd.getDate()-(DAYS-1));sd.setHour
   var q=it.filter(function(r){return r.kind==='見積依頼'});var cc={};q.forEach(function(r){cc[r.company]=(cc[r.company]||0)+1});
   var hl=h;h='';
   h+=sec('社長案件',all.filter(function(r){return r.boss}),'boss');
+  h+=sec('各自に確認',all.filter(function(r){return r.ask&&!(r.needsReply&&r.replied)}),'',{group:'person',ask:true});
   h+=sec('見積依頼 '+Object.keys(cc).map(function(k){return esc(k)+' '+cc[k]}).join('・'),q,'',{group:'company',nokind:true});
   h+=sec('未返信（相手が答えを待っている）',all.filter(function(r){return r.needsReply&&!r.replied&&r.kind!=='FAX'&&!NOISE(r)}),'warn');
-  h+=sec('各自に確認',all.filter(function(r){return r.ask&&!(r.needsReply&&r.replied)}),'',{group:'person',ask:true});
   h+=sec('FAX',it.filter(function(r){return r.dir==='fax'}),'',{nokind:true});
   var pc={};it.forEach(function(r){if(r.dir==='fax'||NOISE(r))return;var p=r.person||'なし';pc[p]=(pc[p]||0)+1});
   var outs=D.outs.filter(function(o){return o.date>=D.since&&!HID(o)});var sent={};outs.forEach(function(o){var b=o.by||'無記名';sent[b]=(sent[b]||0)+1});
