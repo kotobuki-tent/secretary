@@ -57,7 +57,7 @@ var K=(new URLSearchParams(location.search).get('k')||'');
 try{ if(K) localStorage.setItem('sec_k',K); else K=localStorage.getItem('sec_k')||''; }catch(e){}
 var DAYS=3,D=null;
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
-function me(n){return n?'<span class="me">'+esc(n)+'</span>':''}
+function me(n){if(!n)return '';if(/^(なし|（なし）|無記名|担当者様?|ご担当者様?|各位)$/.test(n))return esc(n);return '<span class="me">'+esc(n)+'</span>'}
 function fmt(d){d=new Date(d);return (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}
 function ago(d){var h=(Date.now()-new Date(d))/36e5;return h<1?Math.round(h*60)+'分':h<48?Math.round(h)+'時間':Math.round(h/24)+'日'}
 function ml(id,subject){if(String(id).indexOf('fax-')===0)return '<span>'+esc(subject||'FAX')+'</span>';return '<a class="ml" onclick="openMail(\''+id+'\')">'+esc(subject||'(件名なし)')+'</a>'}
