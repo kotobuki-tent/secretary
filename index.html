@@ -123,10 +123,12 @@ function render(){var sd=new Date();sd.setDate(sd.getDate()-(DAYS-1));sd.setHour
   hl+='<section><details><summary>受信すべて（期間内 '+it.length+'件）</summary>'+it.slice().reverse().map(function(r){return row(r)}).join('')+'</details></section>';
   document.getElementById('main').innerHTML='<div class="cols"><div>'+hl+'</div><div>'+hr+'</div></div>';
   document.getElementById('st').textContent='更新 '+(D.lastSync?fmt(D.lastSync):'未')}
-// 同じ FAX が2経路（Gmail 転送 と iMac Mail.app 直読み id=fax-…）で入ると2件になるので、受信時刻が3分以内の組は Gmail 側を残して Mail.app 側を落とす
-function dedupeFax(d){var fx=(d.items||[]).filter(function(r){return r.dir==='fax'});var drop={};
-  fx.forEach(function(a){if(String(a.id).indexOf('fax-')!==0)return;var ta=new Date(a.date).getTime();
-    fx.forEach(function(b){if(b===a||String(b.id).indexOf('fax-')===0)return;if(Math.abs(new Date(b.date).getTime()-ta)<=180000){drop[a.id]=true;if(a.done)b.done=true;if(a.kind==='非表示')b.kind='非表示'}})});
+// 同じ FAX が2件入る（9/10〜 fax.rx の転送が Gmail に2通届く／以前は Mail.app 直読み id=fax-… との二重）ので、受信時刻が3分以内の FAX は1件にまとめる。完了・非表示・宛名は引き継ぐ
+function dedupeFax(d){var fx=(d.items||[]).filter(function(r){return r.dir==='fax'}).sort(function(a,b){return a.date<b.date?-1:1});var kept=[],drop={};
+  fx.forEach(function(r){var t=new Date(r.date).getTime();var k=null;
+    for(var i=kept.length-1;i>=0;i--){if(t-kept[i].t<=180000){k=kept[i].r;break}}
+    if(!k){kept.push({t:t,r:r});return}
+    drop[r.id]=true;if(r.done)k.done=true;if(r.kind==='非表示')k.kind='非表示';if(!k.person&&r.person)k.person=r.person;if(!k.ask&&r.ask)k.ask=r.ask;if(!k.due&&r.due)k.due=r.due;if(r.needsReply)k.needsReply=true});
   d.items=d.items.filter(function(r){return !drop[r.id]})}
 function load(){
   if(!K){document.getElementById('main').innerHTML='<p class="empty">キーがありません（URL に ?k= を付けて開いてください）</p>';return}
