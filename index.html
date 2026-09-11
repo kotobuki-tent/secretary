@@ -27,7 +27,7 @@ section{background:#fff;border:1px solid #e3e3e3;border-radius:6px;margin:10px 0
 h2{font-size:17px;margin:0 0 6px;display:flex;align-items:center;gap:6px}
 h2 .n{background:#222;color:#fff;border-radius:11px;padding:0 8px;font-size:14px}
 h2.warn .n{background:#d33}h2.boss .n{background:#c60}
-.grp{color:#555;font-size:14px;margin:6px 0 2px}
+.grp{color:#555;font-size:14px;margin:6px 0 2px}.me{display:inline-block;font-weight:700;color:#333;background:#fff1a8;padding:0 6px;border-radius:3px}.grp .me{font-size:15px}
 .row{display:flex;gap:8px;align-items:flex-start;padding:3px 0;border-top:1px solid #f0f0f0}
 .row:first-of-type{border-top:0}
 .row input{margin-top:3px}.row .b{flex:1;min-width:0}.row .m{font-size:14px;color:#666}.row .s{margin:1px 0}
@@ -57,6 +57,7 @@ var K=(new URLSearchParams(location.search).get('k')||'');
 try{ if(K) localStorage.setItem('sec_k',K); else K=localStorage.getItem('sec_k')||''; }catch(e){}
 var DAYS=3,D=null;
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function me(n){return n?'<span class="me">'+esc(n)+'</span>':''}
 function fmt(d){d=new Date(d);return (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}
 function ago(d){var h=(Date.now()-new Date(d))/36e5;return h<1?Math.round(h*60)+'分':h<48?Math.round(h)+'時間':Math.round(h/24)+'日'}
 function ml(id,subject){if(String(id).indexOf('fax-')===0)return '<span>'+esc(subject||'FAX')+'</span>';return '<a class="ml" onclick="openMail(\''+id+'\')">'+esc(subject||'(件名なし)')+'</a>'}
@@ -65,12 +66,12 @@ function openMail(id){var ov=document.getElementById('ov');document.getElementBy
     document.getElementById('ovh').textContent=(m.subject||'(件名なし)')+'\n'+fmt(m.date)+'  '+(m.from||'')+'\n→ '+(m.to||'')+(m.cc?'\ncc '+m.cc:'')+(m.attachments&&m.attachments.length?'\n添付: '+m.attachments.join(', '):'');
     document.getElementById('ovb').textContent=m.body||'';}).catch(function(e){document.getElementById('ovh').textContent='取得失敗 '+e.message})}
 function row(r,opt){opt=opt||{};var t='';
-  if(r.needsReply){t+=r.replied?'<span class="tag rep">返信済み '+esc(r.replied.by)+' '+fmt(r.replied.at)+'</span>':'<span class="tag no">未返信 '+ago(r.date)+'</span>'}
+  if(r.needsReply){t+=r.replied?'<span class="tag rep">返信済み '+me(r.replied.by)+' '+fmt(r.replied.at)+'</span>':'<span class="tag no">未返信 '+ago(r.date)+'</span>'}
   if(r.due)t+='<span class="tag due">期日 '+esc(r.due).slice(5).replace('-','/')+'</span>';
   if(r.kind&&!opt.nokind)t+='<span class="tag">'+esc(r.kind)+'</span>';
   if(!r.classified)t+='<span class="tag">未分類</span>';
   return '<div class="row'+(r.done?' done':'')+'"><input type="checkbox" '+(r.done?'checked':'')+' onchange="toggle(\''+r.id+'\',this.checked)"><div class="b">'+
-    '<div class="m">'+fmt(r.date)+' '+esc(r.company)+(r.fromName&&r.company!==r.fromName?' '+esc(r.fromName.replace(/<.*/,'')):'')+(r.person?' → '+esc(r.person):'')+' '+ml(r.id,r.subject)+'</div>'+
+    '<div class="m">'+fmt(r.date)+' '+esc(r.company)+(r.fromName&&r.company!==r.fromName?' '+esc(r.fromName.replace(/<.*/,'')):'')+(r.person?' → '+me(r.person):'')+' '+ml(r.id,r.subject)+'</div>'+
     '<div class="s">'+esc(r.summary)+'</div>'+(opt.ask&&r.ask?'<div class="m">確認: '+esc(r.ask)+'</div>':'')+'<div>'+t+(opt.ask?askTags(r):'')+'</div></div></div>'}
 function askTags(r){var a=(D.asks||{})[r.id];var h='';
   if(a){h+='<span class="tag ask">聞いた '+fmt(a.askedAt)+'</span>';if(a.answer)h+='<span class="tag rep">'+esc(a.person)+'：'+esc(a.answer)+' '+fmt(a.answeredAt)+'</span>'}
@@ -82,7 +83,7 @@ function askNow(id,btn){btn.disabled=true;btn.textContent='送信中…';
 function sec(title,items,cls,opt){var live=items.filter(function(r){return !r.done}),done=items.filter(function(r){return r.done});
   var h='<section><h2 class="'+(cls||'')+'">'+title+'<span class="n">'+live.length+'</span></h2>';
   if(opt&&opt.group){var g={};live.forEach(function(r){var k=r[opt.group]||'（なし）';(g[k]=g[k]||[]).push(r)});
-    Object.keys(g).sort().forEach(function(k){h+='<div class="grp">'+esc(k)+'（'+g[k].length+'）</div>'+g[k].map(function(r){return row(r,opt)}).join('')})}
+    Object.keys(g).sort().forEach(function(k){h+='<div class="grp">'+(opt.group==='person'?me(k):esc(k))+'（'+g[k].length+'）</div>'+g[k].map(function(r){return row(r,opt)}).join('')})}
   else h+=live.length?live.map(function(r){return row(r,opt)}).join(''):'<p class="empty">なし</p>';
   if(done.length)h+='<details class="donebox"><summary>✓ 完了 '+done.length+'件（押すと開く）</summary>'+done.map(function(r){return row(r,opt)}).join('')+'</details>';
   return h+'</section>'}
@@ -95,7 +96,7 @@ function moves(it,outs){var th={};
   if(!list.length)return '<section><h2>動き<span class="n">0</span></h2><p class="empty">なし</p></section>';
   var h='<section><h2>動き（スレッド別・新しい順）<span class="n">'+list.length+'</span></h2>';
   list.forEach(function(t){var e=t.last;var lastIn=t.ev.slice().reverse().filter(function(x){return x.dir!=='out'})[0];
-    var who=(e.dir==='out'?'<span class="tag dout">こっちから</span>'+esc(e.who)+' → '+esc(e.to):'<span class="tag din">あっちから</span>'+esc(e.who)+(e.to?' → '+esc(e.to):''));
+    var who=(e.dir==='out'?'<span class="tag dout">こっちから</span>'+me(e.who)+' → '+esc(e.to):'<span class="tag din">あっちから</span>'+esc(e.who)+(e.to?' → '+me(e.to):''));
     var st='';if(lastIn&&lastIn.item&&lastIn.item.needsReply){st=lastIn.item.replied?'<span class="tag rep">返信済み</span>':'<span class="tag no">未返信</span>'}
     if(e.dir==='fax')st+='<span class="tag">FAX</span>';
     if(e.item&&!e.item.classified)st+='<span class="tag">未分類</span>';
@@ -113,7 +114,7 @@ function render(){var sd=new Date();sd.setDate(sd.getDate()-(DAYS-1));sd.setHour
   h+=sec('FAX',it.filter(function(r){return r.dir==='fax'}),'',{nokind:true});
   var pc={};it.forEach(function(r){if(r.dir==='fax'||NOISE(r))return;var p=r.person||'なし';pc[p]=(pc[p]||0)+1});
   var outs=D.outs.filter(function(o){return o.date>=D.since&&!HID(o)});var sent={};outs.forEach(function(o){var b=o.by||'無記名';sent[b]=(sent[b]||0)+1});
-  h+='<section><h2>件数</h2><div class="cnt">受信 '+it.filter(function(r){return r.dir!=='fax'&&!NOISE(r)}).length+'件（宛名別: '+Object.keys(pc).sort(function(a,b){return pc[b]-pc[a]}).map(function(k){return esc(k)+' '+pc[k]}).join('・')+'）<br>kt-info発 '+outs.length+'件（'+Object.keys(sent).map(function(k){return esc(k)+' '+sent[k]}).join('・')+'）</div></section>';
+  h+='<section><h2>件数</h2><div class="cnt">受信 '+it.filter(function(r){return r.dir!=='fax'&&!NOISE(r)}).length+'件（宛名別: '+Object.keys(pc).sort(function(a,b){return pc[b]-pc[a]}).map(function(k){return me(k)+' '+pc[k]}).join('・')+'）<br>kt-info発 '+outs.length+'件（'+Object.keys(sent).map(function(k){return me(k)+' '+sent[k]}).join('・')+'）</div></section>';
   var hr=h;
   var noise=it.filter(NOISE);
   hl+='<section><details><summary>営業・自動応答（'+noise.length+'件）</summary>'+noise.slice().reverse().map(function(r){return row(r)}).join('')+'</details></section>';
