@@ -123,11 +123,16 @@ function render(){var sd=new Date();sd.setDate(sd.getDate()-(DAYS-1));sd.setHour
   hl+='<section><details><summary>受信すべて（期間内 '+it.length+'件）</summary>'+it.slice().reverse().map(function(r){return row(r)}).join('')+'</details></section>';
   document.getElementById('main').innerHTML='<div class="cols"><div>'+hl+'</div><div>'+hr+'</div></div>';
   document.getElementById('st').textContent='更新 '+(D.lastSync?fmt(D.lastSync):'未')}
+// 同じ FAX が2経路（Gmail 転送 と iMac Mail.app 直読み id=fax-…）で入ると2件になるので、受信時刻が3分以内の組は Gmail 側を残して Mail.app 側を落とす
+function dedupeFax(d){var fx=(d.items||[]).filter(function(r){return r.dir==='fax'});var drop={};
+  fx.forEach(function(a){if(String(a.id).indexOf('fax-')!==0)return;var ta=new Date(a.date).getTime();
+    fx.forEach(function(b){if(b===a||String(b.id).indexOf('fax-')===0)return;if(Math.abs(new Date(b.date).getTime()-ta)<=180000){drop[a.id]=true;if(a.done)b.done=true;if(a.kind==='非表示')b.kind='非表示'}})});
+  d.items=d.items.filter(function(r){return !drop[r.id]})}
 function load(){
   if(!K){document.getElementById('main').innerHTML='<p class="empty">キーがありません（URL に ?k= を付けて開いてください）</p>';return}
   fetch(API+'?k='+encodeURIComponent(K)+'&a=data&days='+DAYS).then(function(r){return r.json()}).then(function(d){
     if(d.error){document.getElementById('main').innerHTML='<p class="empty">'+esc(d.error)+'</p>';return}
-    D=d;render()}).catch(function(e){document.getElementById('main').innerHTML='<p class="empty">エラー: '+esc(e.message)+'</p>'})}
+    D=d;dedupeFax(D);render()}).catch(function(e){document.getElementById('main').innerHTML='<p class="empty">エラー: '+esc(e.message)+'</p>'})}
 function toggle(id,f){var r=D.items.filter(function(x){return x.id===id})[0];if(r){r.done=f;render()}
   fetch(API,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain'},body:JSON.stringify({k:K,action:'done',id:id,flag:f})})}
 function hide(ids,f){D.items.concat(D.outs).forEach(function(r){if(ids.indexOf(r.id)>=0)r.kind=f?'非表示':''});render();
