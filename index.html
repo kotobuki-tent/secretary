@@ -19,7 +19,8 @@ header .st{color:#777;font-size:14px;margin-left:auto}
 header .sync{border:1px solid #2b6;color:#2b6;background:#fff;padding:4px 10px;border-radius:4px;cursor:pointer}
 main{max-width:1700px;margin:0 auto;padding:10px 12px 60px}
 .cols{display:grid;grid-template-columns:1fr;gap:0 14px}
-@media(min-width:1100px){.cols{grid-template-columns:1.25fr 1fr;align-items:start}.cols>div{max-height:calc(100vh - 72px);overflow-y:auto;padding-right:4px;scrollbar-width:thin}main{padding-bottom:10px}}
+@media(min-width:1100px){.cols{grid-template-columns:1.25fr 1fr;align-items:start}.cols>div{max-height:calc(100vh - 72px);overflow-y:auto;padding-right:4px;scrollbar-width:thin}main{padding-bottom:10px}
+.cols>div:nth-child(2){display:flex;flex-direction:column;overflow:hidden;height:calc(100vh - 72px)}.cols>div:nth-child(2) .pin{flex:0 0 auto}.cols>div:nth-child(2) .scr{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:thin;padding-right:4px}}
 .card{position:relative;border:1px solid #e4e4e4;border-radius:6px;padding:6px 34px 6px 10px;margin:6px 0;background:#fbfbfb;line-height:1.45}.card .x{position:absolute;top:6px;right:8px;border:1px solid #ccc;background:#fff;color:#888;border-radius:4px;font-size:13px;line-height:1;padding:3px 6px;cursor:pointer}.card .x:hover{color:#c33;border-color:#c33}.back{border:1px solid #aaa;background:#fff;border-radius:4px;font-size:13px;padding:2px 7px;cursor:pointer;margin-right:4px}.card .t{color:#888;font-size:14px}.card .who{margin:1px 0}.card .s{margin:1px 0}.card .sub{font-size:14px}.card .sub a{color:#25a}
 #ov{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:9;align-items:flex-start;justify-content:center;padding:30px 10px}#ov.on{display:flex}#ov .bx{background:#fff;max-width:900px;width:100%;max-height:90vh;overflow:auto;border-radius:8px;padding:14px 18px;box-shadow:0 8px 30px rgba(0,0,0,.25)}#ov .hd{font-size:14px;color:#666;margin-bottom:8px;white-space:pre-wrap}#ov .bd{white-space:pre-wrap;font-size:16px}#ov .x{float:right;border:1px solid #bbb;background:#fff;border-radius:4px;padding:2px 10px;cursor:pointer}
 a.ml{cursor:pointer}
@@ -110,15 +111,14 @@ function render(){var sd=new Date();sd.setDate(sd.getDate()-(DAYS-1));sd.setHour
   h+=sec('見積依頼 '+Object.keys(cc).map(function(k){return esc(k)+' '+cc[k]}).join('・'),q,'',{group:'company',nokind:true});
   h+=moves(it,D.outs.filter(function(o){return o.date>=D.since&&!HID(o)}));
   var hl=h;h='';
-  h+=wxSec();
-  h+=sec('社長案件',all.filter(function(r){return r.boss}),'boss');
+  var pin=wxSec()+sec('社長案件',all.filter(function(r){return r.boss}),'boss');   // 右列の上に固定（広い画面）
   h+=sec('各自に確認',all.filter(function(r){return r.ask&&!(r.needsReply&&r.replied)}),'',{group:'person',ask:true});
   h+=sec('未返信（相手が答えを待っている）',all.filter(function(r){return r.needsReply&&!r.replied&&r.kind!=='FAX'&&!NOISE(r)}),'warn');
   h+=sec('FAX',it.filter(function(r){return r.dir==='fax'}),'',{nokind:true});
   var pc={};it.forEach(function(r){if(r.dir==='fax'||NOISE(r))return;var p=r.person||'なし';pc[p]=(pc[p]||0)+1});
   var outs=D.outs.filter(function(o){return o.date>=D.since&&!HID(o)});var sent={};outs.forEach(function(o){var b=o.by||'無記名';sent[b]=(sent[b]||0)+1});
   h+='<section><h2>件数</h2><div class="cnt">受信 '+it.filter(function(r){return r.dir!=='fax'&&!NOISE(r)}).length+'件（宛名別: '+Object.keys(pc).sort(function(a,b){return pc[b]-pc[a]}).map(function(k){return me(k)+' '+pc[k]}).join('・')+'）<br>kt-info発 '+outs.length+'件（'+Object.keys(sent).map(function(k){return me(k)+' '+sent[k]}).join('・')+'）</div></section>';
-  var hr=h;
+  var hr='<div class="pin">'+pin+'</div><div class="scr">'+h+'</div>';
   var noise=it.filter(NOISE);
   hl+='<section><details><summary>営業・自動応答（'+noise.length+'件）</summary>'+noise.slice().reverse().map(function(r){return row(r)}).join('')+'</details></section>';
   var hid=D.items.concat(D.outs).filter(HID).sort(function(a,b){return a.date<b.date?1:-1});
