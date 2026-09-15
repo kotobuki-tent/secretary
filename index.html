@@ -19,7 +19,7 @@ header .st{color:#777;font-size:14px;margin-left:auto}
 header .sync{border:1px solid #2b6;color:#2b6;background:#fff;padding:4px 10px;border-radius:4px;cursor:pointer}
 main{max-width:1700px;margin:0 auto;padding:10px 12px 60px}
 .cols{display:grid;grid-template-columns:1fr;gap:0 14px}
-@media(min-width:1100px){.cols{grid-template-columns:1.25fr 1fr}}
+@media(min-width:1100px){.cols{grid-template-columns:1.25fr 1fr;align-items:start}.cols>div{max-height:calc(100vh - 72px);overflow-y:auto;padding-right:4px;scrollbar-width:thin}main{padding-bottom:10px}}
 .card{position:relative;border:1px solid #e4e4e4;border-radius:6px;padding:6px 34px 6px 10px;margin:6px 0;background:#fbfbfb;line-height:1.45}.card .x{position:absolute;top:6px;right:8px;border:1px solid #ccc;background:#fff;color:#888;border-radius:4px;font-size:13px;line-height:1;padding:3px 6px;cursor:pointer}.card .x:hover{color:#c33;border-color:#c33}.back{border:1px solid #aaa;background:#fff;border-radius:4px;font-size:13px;padding:2px 7px;cursor:pointer;margin-right:4px}.card .t{color:#888;font-size:14px}.card .who{margin:1px 0}.card .s{margin:1px 0}.card .sub{font-size:14px}.card .sub a{color:#25a}
 #ov{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:9;align-items:flex-start;justify-content:center;padding:30px 10px}#ov.on{display:flex}#ov .bx{background:#fff;max-width:900px;width:100%;max-height:90vh;overflow:auto;border-radius:8px;padding:14px 18px;box-shadow:0 8px 30px rgba(0,0,0,.25)}#ov .hd{font-size:14px;color:#666;margin-bottom:8px;white-space:pre-wrap}#ov .bd{white-space:pre-wrap;font-size:16px}#ov .x{float:right;border:1px solid #bbb;background:#fff;border-radius:4px;padding:2px 10px;cursor:pointer}
 a.ml{cursor:pointer}
@@ -47,8 +47,8 @@ details summary{cursor:pointer;color:#666;font-size:15px}
 <header>
   <h1>秘書</h1>
   <span class="sel"><button data-d="1">今日</button><button data-d="3" class="on">3日</button><button data-d="7">1週間</button></span>
-  <button class="sync" onclick="syncNow()">今すぐ更新</button>
   <span class="st" id="st"></span>
+  <button class="sync" onclick="syncNow()">今すぐ更新</button>
 </header>
 <main id="main"><p class="empty">読み込み中…</p></main>
 <div id="ov" onclick="if(event.target===this)this.classList.remove('on')"><div class="bx"><button class="x" onclick="document.getElementById('ov').classList.remove('on')">閉じる</button><div class="hd" id="ovh"></div><div class="bd" id="ovb"></div></div></div>
