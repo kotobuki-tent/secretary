@@ -36,6 +36,7 @@ h2.warn .n{background:#d33}h2.boss .n{background:#c60}
 .tag.rep{background:#e6f5ea;color:#1a7a3a}.tag.ask{background:#ede7ff;color:#5b3fb5}.bt{border:1px solid #5b3fb5;color:#5b3fb5;background:#fff;border-radius:4px;padding:1px 9px;font-size:13px;cursor:pointer;margin-left:6px}.tag.dout{background:#dbe8ff;color:#1a4aa0}.tag.din{background:#ffe4cc;color:#8a4a00}.tag.no{background:#fde8e8;color:#b22}.tag.due{background:#fff3d6;color:#8a5a00}
 a{color:#25a;text-decoration:none}
 .cnt{font-size:16px;color:#444;line-height:1.7}
+.wx{font-size:15px;line-height:1.7;color:#333}.wx b{color:#111}.wx .ty{color:#c00;font-weight:700}.wx .src{color:#999;font-size:12px}
 details summary{cursor:pointer;color:#666;font-size:15px}
 .empty{color:#999;font-size:15px}
 @media(max-width:480px){body{font-size:15px}main{padding:6px}section{padding:6px 8px}}
@@ -108,6 +109,7 @@ function render(){var sd=new Date();sd.setDate(sd.getDate()-(DAYS-1));sd.setHour
   h+=sec('見積依頼 '+Object.keys(cc).map(function(k){return esc(k)+' '+cc[k]}).join('・'),q,'',{group:'company',nokind:true});
   h+=moves(it,D.outs.filter(function(o){return o.date>=D.since&&!HID(o)}));
   var hl=h;h='';
+  h+=wxSec();
   h+=sec('社長案件',all.filter(function(r){return r.boss}),'boss');
   h+=sec('各自に確認',all.filter(function(r){return r.ask&&!(r.needsReply&&r.replied)}),'',{group:'person',ask:true});
   h+=sec('未返信（相手が答えを待っている）',all.filter(function(r){return r.needsReply&&!r.replied&&r.kind!=='FAX'&&!NOISE(r)}),'warn');
@@ -130,6 +132,31 @@ function dedupeFax(d){var fx=(d.items||[]).filter(function(r){return r.dir==='fa
     if(!k){kept.push({t:t,r:r});return}
     drop[r.id]=true;if(r.done)k.done=true;if(r.kind==='非表示')k.kind='非表示';if(!k.person&&r.person)k.person=r.person;if(!k.ask&&r.ask)k.ask=r.ask;if(!k.due&&r.due)k.due=r.due;if(r.needsReply)k.needsReply=true});
   d.items=d.items.filter(function(r){return !drop[r.id]})}
+// ---------- 天気（北栄町＝Open-Meteo 地点予報／鳥取県東部・中西部＝気象庁府県予報／台風＝気象庁台風情報）----------
+var W={};
+var WMO={0:'晴れ',1:'晴れ',2:'晴れ時々くもり',3:'くもり',45:'霧',48:'霧',51:'霧雨',53:'霧雨',55:'霧雨',56:'霧雨',57:'霧雨',61:'雨',63:'雨',65:'大雨',66:'雨',67:'雨',71:'雪',73:'雪',75:'大雪',77:'雪',80:'にわか雨',81:'にわか雨',82:'激しい雨',85:'雪',86:'雪',95:'雷雨',96:'雷雨',99:'雷雨'};
+function wxSec(){
+  var h='<section><h2>天気</h2><div class="wx">';
+  if(!W.hokuei&&!W.jma&&!W.ty)return h+'<span class="src">読み込み中…</span></div></section>';
+  if(W.hokuei){var d=W.hokuei.daily;var lbl=['今日','明日'];
+    h+='<b>北栄町</b>：'+lbl.map(function(l,i){return l+' '+(WMO[d.weather_code[i]]||'')+' '+Math.round(d.temperature_2m_max[i])+'/'+Math.round(d.temperature_2m_min[i])+'℃ 降水'+d.precipitation_probability_max[i]+'% 風'+Math.round(d.wind_speed_10m_max[i]/3.6)+'m'}).join('　')+'<br>'}
+  if(W.jma){h+=W.jma.map(function(a){return '<b>'+esc(a.name)+'</b>：今日 '+esc(a.w[0])+'　明日 '+esc(a.w[1])}).join('<br>')+'<br>'}
+  if(W.ty){h+='<b>台風</b>：'+(W.ty.length?W.ty.map(function(t){return '<span class="ty">'+esc(t)+'</span>'}).join('<br>'):'なし')}
+  if(W.err)h+='<br><span class="src">'+esc(W.err)+'</span>';
+  return h+'</div></section>'}
+function loadWeather(){
+  var jp=function(u){return fetch(u).then(function(r){return r.json()})};
+  var p1=jp('https://api.open-meteo.com/v1/forecast?latitude=35.49&longitude=133.76&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max&timezone=Asia%2FTokyo&forecast_days=2').then(function(j){W.hokuei=j}).catch(function(e){W.err=(W.err||'')+'北栄町: '+e.message+' '});
+  var p2=jp('https://www.jma.go.jp/bosai/forecast/data/forecast/310000.json').then(function(j){var ts=j[0].timeSeries[0];
+    W.jma=ts.areas.map(function(a){return {name:a.area.name,w:a.weathers.map(function(x){return x.replace(/\s+/g,' ')})}})}).catch(function(e){W.err=(W.err||'')+'気象庁: '+e.message+' '});
+  var p3=jp('https://www.jma.go.jp/bosai/typhoon/data/targetTc.json').then(function(list){
+    return Promise.all((list||[]).map(function(t){return jp('https://www.jma.go.jp/bosai/typhoon/data/'+t.tropicalCyclone+'/specifications.json').then(function(sp){
+      var title=sp[0]||{},now=sp[1]||{},f24=sp.filter(function(x){return x.advancedHours===24})[0]||sp[2]||{};
+      var cat=(now.category&&now.category.jp)||'';var no=/^\d+$/.test(String(title.typhoonNumber))?'台風'+parseInt(String(title.typhoonNumber).slice(2),10)+'号':cat;
+      var s=no+'：'+(now.location||'')+' '+(now.course||'')+'へ'+((now.speed&&now.speed['km/h'])||'-')+'km/h 中心気圧'+(now.pressure||'-')+'hPa';
+      if(f24.location)s+='　→24時間後 '+(f24.category&&f24.category.jp||'')+' '+f24.location;
+      return s}).catch(function(){return t.tropicalCyclone})}))}).then(function(arr){W.ty=arr}).catch(function(e){W.ty=[];W.err=(W.err||'')+'台風: '+e.message+' '});
+  Promise.all([p1,p2,p3]).then(function(){if(D&&D.items)render();else{var el=document.getElementById('wxTmp');if(el)el.outerHTML=wxSec()}})}
 function load(){
   if(!K){document.getElementById('main').innerHTML='<p class="empty">キーがありません（URL に ?k= を付けて開いてください）</p>';return}
   fetch(API+'?k='+encodeURIComponent(K)+'&a=data&days='+DAYS).then(function(r){return r.json()}).then(function(d){
@@ -142,7 +169,7 @@ function hide(ids,f){D.items.concat(D.outs).forEach(function(r){if(ids.indexOf(r
 function syncNow(){document.getElementById('st').textContent='取得中…';
   fetch(API+'?k='+encodeURIComponent(K)+'&a=sync').then(function(){load()}).catch(function(e){document.getElementById('st').textContent='失敗 '+e.message})}
 document.querySelectorAll('.sel button').forEach(function(b){b.onclick=function(){DAYS=Number(b.dataset.d);document.querySelectorAll('.sel button').forEach(function(x){x.classList.toggle('on',x===b)});load()}});
-load();setInterval(load,5*60*1000);
+load();loadWeather();setInterval(load,5*60*1000);setInterval(loadWeather,30*60*1000);
 </script>
 </body>
 </html>
