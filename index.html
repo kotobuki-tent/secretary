@@ -36,6 +36,7 @@ h2.warn .n{background:#d33}h2.boss .n{background:#c60}
 .tag.rep{background:#e6f5ea;color:#1a7a3a}.tag.ask{background:#ede7ff;color:#5b3fb5}.bt{border:1px solid #5b3fb5;color:#5b3fb5;background:#fff;border-radius:4px;padding:1px 9px;font-size:13px;cursor:pointer;margin-left:6px}.tag.dout{background:#dbe8ff;color:#1a4aa0}.tag.din{background:#ffe4cc;color:#8a4a00}.tag.no{background:#fde8e8;color:#b22}.tag.due{background:#fff3d6;color:#8a5a00}
 a{color:#25a;text-decoration:none}
 .cnt{font-size:16px;color:#444;line-height:1.7}
+.wxwrap{display:flex;gap:14px;align-items:flex-start}.wxmap{flex:1 1 320px;min-width:0}.wxmap svg{max-width:none!important}.wxlinks{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;padding-top:24px;font-size:16px;line-height:1.5;white-space:nowrap}@media(max-width:560px){.wxwrap{flex-direction:column}.wxlinks{padding-top:0;flex-direction:row;flex-wrap:wrap;gap:6px 14px}}
 .wx{font-size:15px;line-height:1.7;color:#333}.wx b{color:#111}.wx .ty{color:#c00;font-weight:700}.wx .src{color:#999;font-size:12px}
 details summary{cursor:pointer;color:#666;font-size:15px}
 .empty{color:#999;font-size:15px}
@@ -165,9 +166,17 @@ function wxMap(){
   });
   return h+'</svg>'}
 function wxSec(){
-  var h='<section><h2>天気 <span style="font-size:12px;color:#999;font-weight:400">今日</span></h2>'+wxMap()+'<div class="wx">';
-  if(W.ty&&W.ty.length)h+='<b>台風</b>：'+W.ty.map(function(t){return '<span class="ty">'+esc(t)+'</span>'}).join('<br>')+'<br>';
-  h+='<a href="https://www.jma.go.jp/bosai/forecast/#area_type=offices&area_code=310000" target="_blank" rel="noopener">鳥取県の週間天気</a>　<a href="https://www.jma.go.jp/bosai/forecast/" target="_blank" rel="noopener">全国</a>　<a href="https://www.jma.go.jp/bosai/nowc/#zoom:9/lat:35.45/lon:133.85/colordepth:normal/elements:hrpns" target="_blank" rel="noopener">雨雲レーダー</a>　<a href="https://www.jma.go.jp/bosai/typhoon/" target="_blank" rel="noopener">台風情報</a>';
+  var L=[['北栄町の週間天気','https://www.jma.go.jp/bosai/forecast/#area_type=class20s&area_code=3137200'],
+         ['鳥取県の週間天気','https://www.jma.go.jp/bosai/forecast/#area_type=offices&area_code=310000'],
+         ['全国の週間天気','https://www.jma.go.jp/bosai/forecast/'],
+         ['雨雲レーダー','https://www.jma.go.jp/bosai/nowc/#zoom:9/lat:35.45/lon:133.85/colordepth:normal/elements:hrpns'],
+         ['風・雨の実況（アメダス）','https://www.jma.go.jp/bosai/amedas/#area_type=offices&area_code=310000'],
+         ['警報・注意報','https://www.jma.go.jp/bosai/warning/#area_type=offices&area_code=310000'],
+         ['台風情報','https://www.jma.go.jp/bosai/typhoon/']];
+  var h='<section><h2>天気 <span style="font-size:12px;color:#999;font-weight:400">今日</span></h2>';
+  h+='<div class="wxwrap"><div class="wxmap">'+wxMap()+'</div><div class="wxlinks">'+L.map(function(l){return '<a href="'+l[1]+'" target="_blank" rel="noopener">'+esc(l[0])+'</a>'}).join('')+'</div></div>';
+  h+='<div class="wx">';
+  if(W.ty&&W.ty.length)h+='<b>台風</b>：'+W.ty.map(function(t){return '<span class="ty">'+esc(t)+'</span>'}).join('<br>');
   if(W.err)h+='<br><span class="src">'+esc(W.err)+'</span>';
   return h+'</div></section>'}
 function loadWeather(){
