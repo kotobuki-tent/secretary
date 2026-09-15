@@ -155,7 +155,7 @@ function wxIcon(code,x,y,sc){ // 原寸24px、sc倍で描く
 function wxMap(){
   var BW=100,BH=112;
   var h='<svg viewBox="0 0 680 330" width="100%" style="max-width:560px;display:block;background:#dbeaf7;border-radius:6px"><path d="'+TP+'" fill="#bfe0ad" stroke="#6aa35a" stroke-width="1.5"/>';
-  SPOTS.forEach(function(sp,i){var px=PX(sp[1]),py=PY(sp[2]),bx=sp[3],by=sp[4];
+  SPOTS.forEach(function(sp,i){var px=PX(sp[1]),py=PY(sp[2]),bx=Math.round(px-BW/2),by=Math.max(6,Math.round(py-BH/2));   // 札はその地点に重ねる
     h+='<rect x="'+bx+'" y="'+by+'" width="'+BW+'" height="'+BH+'" rx="6" fill="#fff" stroke="#bbb"/><text x="'+(bx+BW/2)+'" y="'+(by+14)+'" font-size="14" font-weight="700" text-anchor="middle" fill="#333" dominant-baseline="central">'+esc(sp[0])+'</text>';
     var d=W.spots&&W.spots[i]&&W.spots[i].daily;
     if(d){h+=wxIcon(d.weather_code[0],bx+BW/2-24,by+24,2);
