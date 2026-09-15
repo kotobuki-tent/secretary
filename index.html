@@ -165,7 +165,7 @@ function wxMap(){
 function wxSec(){
   var h='<section><h2>天気 <span style="font-size:12px;color:#999;font-weight:400">今日</span></h2>'+wxMap()+'<div class="wx">';
   h+='<b>台風</b>：'+(W.ty?(W.ty.length?W.ty.map(function(t){return '<span class="ty">'+esc(t)+'</span>'}).join('<br>'):'なし'):'…');
-  h+='<br><a href="https://weathernews.jp/onebox/tenki/tottori/" target="_blank" rel="noopener">週間天気</a>　<a href="https://weathernews.jp/onebox/tenki/" target="_blank" rel="noopener">全国</a>　<a href="https://weathernews.jp/onebox/radar/tottori/" target="_blank" rel="noopener">雨雲レーダー</a>　<a href="https://www.jma.go.jp/bosai/typhoon/" target="_blank" rel="noopener">台風情報（気象庁）</a>';
+  h+='<br><a href="https://www.jma.go.jp/bosai/forecast/#area_type=offices&area_code=310000" target="_blank" rel="noopener">鳥取県の週間天気</a>　<a href="https://www.jma.go.jp/bosai/forecast/" target="_blank" rel="noopener">全国</a>　<a href="https://www.jma.go.jp/bosai/nowc/#zoom:9/lat:35.45/lon:133.85/colordepth:normal/elements:hrpns" target="_blank" rel="noopener">雨雲レーダー</a>　<a href="https://www.jma.go.jp/bosai/typhoon/" target="_blank" rel="noopener">台風情報</a>　<span class="src">（いずれも気象庁）</span>';
   if(W.err)h+='<br><span class="src">'+esc(W.err)+'</span>';
   return h+'</div></section>'}
 function loadWeather(){
