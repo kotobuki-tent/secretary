@@ -173,7 +173,7 @@ function wxSec(){
          ['雨雲レーダー','https://www.jma.go.jp/bosai/nowc/#zoom:9/lat:35.45/lon:133.85/colordepth:normal/elements:hrpns'],
          ['風・雨の実況（アメダス）','https://www.jma.go.jp/bosai/amedas/#area_type=offices&area_code=310000'],
          ['警報・注意報','https://www.jma.go.jp/bosai/warning/#area_type=offices&area_code=310000'],
-         ['台風情報','https://www.jma.go.jp/bosai/typhoon/']];
+         ['台風情報','https://www.jma.go.jp/bosai/map.html#5/34.5/137/&elem=root&typhoon=all&contents=typhoon']];
   var h='<section><h2>天気 <span style="font-size:12px;color:#999;font-weight:400">今日</span></h2>';
   h+='<div class="wxwrap"><div class="wxmap">'+wxMap()+'</div><div class="wxlinks">'+L.map(function(l){return '<a href="'+l[1]+'" target="_blank" rel="noopener">'+esc(l[0])+'</a>'}).join('')+'</div></div>';
   h+='<div class="wx">';
