@@ -191,11 +191,16 @@ function loadWeather(){
       if(f24.location)s+=' → 24時間後 '+(f24.category&&f24.category.jp||'')+'（'+f24.location+'）';
       return s}).catch(function(){return t.tropicalCyclone})}))}).then(function(arr){W.ty=arr}).catch(function(e){W.ty=[];W.err=(W.err||'')+'台風: '+e.message+' '});
   Promise.all([p1,p3]).then(function(){if(D&&D.items)render()})}
-function load(){
+function load(tries){
+  tries=tries||0;
   if(!K){document.getElementById('main').innerHTML='<p class="empty">キーがありません（URL に ?k= を付けて開いてください）</p>';return}
-  fetch(API+'?k='+encodeURIComponent(K)+'&a=data&days='+DAYS).then(function(r){return r.json()}).then(function(d){
+  // GAS は放置後の1回目（コールドスタート）に JSON でなく HTML のエラーページを返すことがある → 少し待って最大2回取り直す
+  fetch(API+'?k='+encodeURIComponent(K)+'&a=data&days='+DAYS).then(function(r){return r.text()}).then(function(t){
+    var d;try{d=JSON.parse(t)}catch(e){throw new Error('not-json')}
     if(d.error){document.getElementById('main').innerHTML='<p class="empty">'+esc(d.error)+'</p>';return}
-    D=d;dedupeFax(D);render()}).catch(function(e){document.getElementById('main').innerHTML='<p class="empty">エラー: '+esc(e.message)+'</p>'})}
+    D=d;dedupeFax(D);render()}).catch(function(e){
+    if(tries<2){document.getElementById('main').innerHTML='<p class="empty">起動中… もう一度取りに行きます（'+(tries+1)+'/2）</p>';setTimeout(function(){load(tries+1)},4000*(tries+1));return}
+    document.getElementById('main').innerHTML='<p class="empty">エラー: '+esc(e.message==='not-json'?'サーバーが起動中です。少し待って再読み込みしてください':e.message)+'</p>'})}
 function toggle(id,f){var r=D.items.filter(function(x){return x.id===id})[0];if(r){r.done=f;render()}
   fetch(API,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain'},body:JSON.stringify({k:K,action:'done',id:id,flag:f})})}
 function hide(ids,f){D.items.concat(D.outs).forEach(function(r){if(ids.indexOf(r.id)>=0)r.kind=f?'非表示':''});render();
