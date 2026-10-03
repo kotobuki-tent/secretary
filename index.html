@@ -125,7 +125,10 @@ function render(){var sd=new Date();sd.setDate(sd.getDate()-(DAYS-1));sd.setHour
   var hid=D.items.concat(D.outs).filter(HID).sort(function(a,b){return a.date<b.date?1:-1});
   hl+='<section><details><summary>非表示にしたもの（'+hid.length+'件）</summary>'+(hid.length?hid.map(function(r){return '<div class="row"><button class="back" onclick="hide(['+JSON.stringify(r.id).replace(/"/g,'&quot;')+'],false)">戻す</button> '+fmt(r.date)+' '+esc(r.company||r.by||'')+' '+esc((r.subject||'').slice(0,40))+'</div>'}).join(''):'<p class="empty">なし</p>')+'</details></section>';
   hl+='<section><details><summary>受信すべて（期間内 '+it.length+'件）</summary>'+it.slice().reverse().map(function(r){return row(r)}).join('')+'</details></section>';
+  // 描き直す前にスクロールの位置を覚え、描き直した後に戻す（✕を押すたびに一番上へ戻っていた、2026-10-03）
+  var sp=[].map.call(document.querySelectorAll('.cols>div, .cols .scr'),function(e){return e.scrollTop}),wy=window.scrollY;
   document.getElementById('main').innerHTML='<div class="cols"><div>'+hl+'</div><div>'+hr+'</div></div>';
+  [].forEach.call(document.querySelectorAll('.cols>div, .cols .scr'),function(e,i){if(sp[i])e.scrollTop=sp[i]});if(wy)window.scrollTo(0,wy);
   document.getElementById('st').textContent='更新 '+(D.lastSync?fmt(D.lastSync):'未')}
 // 同じ FAX が2件入る（9/10〜 fax.rx の転送が Gmail に2通届く／以前は Mail.app 直読み id=fax-… との二重）ので、受信時刻が3分以内の FAX は1件にまとめる。完了・非表示・宛名は引き継ぐ
 function dedupeFax(d){var fx=(d.items||[]).filter(function(r){return r.dir==='fax'}).sort(function(a,b){return a.date<b.date?-1:1});var kept=[],drop={};
