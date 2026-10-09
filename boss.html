@@ -49,13 +49,13 @@ td.name{font-weight:600;font-size:13px}td.sub{color:var(--dim)}
 <div class="card"><h2>日報の記入状況</h2><div id="stats" class="loading">読み込み中…</div></div>
 </div><div>
 <div class="card"><h2>人事考課</h2><a class="btn" id="hr" target="_blank" rel="noopener">人事考課を開く（経営）</a></div>
-<div class="card"><h2>給料台帳</h2><div class="stats-note">級・号を入れると新給料表（1級1号 <b id="cfgEntry"></b> 円・刻み 500/1,000/1,500/2,000/2,500、パート1号 <b id="cfgPart"></b> 円・10円/20円の二段）から基本給が出る。中身は暗号にして預けてあり、鍵のある端末だけ読める。</div>
+<div class="card"><h2>給料台帳</h2>
 <div id="pay" class="loading">読み込み中…</div>
 <div class="pay-foot"><span id="payMeta"></span><span class="pay-btns"><button class="btn sm" onclick="payEdit(-1)">＋ 人を足す</button><button class="btn sm gray" onclick="payCfg()">表の設定</button><label class="btn sm gray" style="cursor:pointer">読み込む<input type="file" id="payFile" accept=".json" style="display:none"></label><button class="btn sm gray" onclick="payExport()">書き出す</button></span></div></div>
 <div class="mo-bg" id="payMo"><div class="mo"><h3 id="payMoTitle">給料</h3>
 <div class="f2"><label>氏名<input id="pf_name"></label><label>区分<select id="pf_kind"><option>役員</option><option>執行役員</option><option>社員</option><option>パート</option></select></label></div>
-<div class="f2"><label>職位<input id="pf_pos" placeholder="管理職／主任／一般／パート"></label><label>級（社員）<input id="pf_grade" type="number" min="1" max="5" inputmode="numeric"></label></div>
-<div class="f2"><label>号<input id="pf_step" type="number" min="1" max="51" inputmode="numeric"></label><label>固定の基本給（役員・執行役員・表適用外）<input id="pf_fixed" type="number" inputmode="numeric" placeholder="表の人は空欄"></label></div>
+<div class="f2"><label>職位<input id="pf_pos"></label><label>級<input id="pf_grade" type="number" min="1" max="5" inputmode="numeric"></label></div>
+<div class="f2"><label>号<input id="pf_step" type="number" min="1" max="51" inputmode="numeric"></label><label>固定額<input id="pf_fixed" type="number" inputmode="numeric"></label></div>
 <div class="f2"><label>役職手当<input id="pf_post" type="number" inputmode="numeric"></label><label>資格手当<input id="pf_qual" type="number" inputmode="numeric"></label></div>
 <label>備考<input id="pf_note"></label>
 <div class="pf-calc" id="pf_calc"></div>
@@ -167,8 +167,7 @@ const num=v=>(v===''||v==null)?'':+v;
 function payFloor(){return Math.ceil(payData.cfg.minWage*payData.cfg.hours)}
 function payRender(){
   const el=document.getElementById('pay'),meta=document.getElementById('payMeta');
-  document.getElementById('cfgEntry').textContent=yen(payData.cfg.entry);document.getElementById('cfgPart').textContent=yen(payData.cfg.partEntry);
-  if(!payData.people.length){el.className='loading';el.textContent='まだ誰も入っていません。「読み込む」で初期データ（JSON）を入れるか、「＋ 人を足す」。';meta.textContent='';return}
+  if(!payData.people.length){el.className='loading';el.textContent='まだ誰も入っていません';meta.textContent='';return}
   const floor=payFloor();
   let h='<table class="pay"><tr><th>氏名</th><th>区分</th><th>職位</th><th class="num">級</th><th class="num">号</th><th class="num">基本給／時給</th><th class="num">役職</th><th class="num">資格</th><th class="num">月額</th><th></th></tr>';
   let prev='';
@@ -176,12 +175,12 @@ function payRender(){
     const part=p.kind==='パート',b=baseOf(p);
     const low=b!=null&&(part?b<payData.cfg.minWage:(p.kind==='社員'&&b<floor));
     const tot=(b!=null&&!part)?b+(num(p.post)||0)+(num(p.qual)||0):null;
-    h+=`<tr class="${prev&&prev!==p.kind?'sep':''}${low?' low':''}" onclick="payEdit(${i})" title="${low?'最低賃金を下回っています':''}"><td class="name">${esc(p.name)}</td><td class="sub">${esc(p.kind)}</td><td class="sub">${esc(p.pos)}</td><td class="num">${part?'':esc(p.grade)}</td><td class="num">${esc(p.step)}</td><td class="num">${b==null?'<span class="sub">—</span>':yen(b)}${part&&b!=null?' <span class="sub">/h</span>':''}${p.fixed!==''&&p.fixed!=null?' <span class="sub">固定</span>':''}</td><td class="num">${yen(p.post)}</td><td class="num">${yen(p.qual)}</td><td class="num"><b>${tot==null?'':yen(tot)}</b></td><td class="sub">✎</td></tr>`;
+    h+=`<tr class="${prev&&prev!==p.kind?'sep':''}${low?' low':''}" onclick="payEdit(${i})"><td class="name">${esc(p.name)}</td><td class="sub">${esc(p.kind)}</td><td class="sub">${esc(p.pos)}</td><td class="num">${part?'':esc(p.grade)}</td><td class="num">${esc(p.step)}</td><td class="num">${b==null?'<span class="sub">—</span>':yen(b)}</td><td class="num">${yen(p.post)}</td><td class="num">${yen(p.qual)}</td><td class="num"><b>${tot==null?'':yen(tot)}</b></td><td class="sub">✎</td></tr>`;
     prev=p.kind;
   });
   el.className='';el.innerHTML=h+'</table>';
   const lows=payData.people.filter(p=>{const b=baseOf(p);return b!=null&&(p.kind==='パート'?b<payData.cfg.minWage:(p.kind==='社員'&&b<floor))}).length;
-  meta.innerHTML=(payData.at?'保存 '+esc(payData.at)+'　':'')+payData.people.length+'人'+(lows?'　<span class="err">最低賃金割れ '+lows+'人（'+yen(payData.cfg.minWage)+'円 × '+payData.cfg.hours+'h ＝ '+yen(floor)+'円）</span>':'');
+  meta.innerHTML=(payData.at?'保存 '+esc(payData.at)+'　':'')+payData.people.length+'人'+(lows?'　<span class="err">最低賃金割れ '+lows+'人</span>':'');
 }
 async function payLoad(){
   const el=document.getElementById('pay');
@@ -208,7 +207,7 @@ async function payCommit(){
 const $p=id=>document.getElementById(id);
 function payCalcShow(){
   const p={kind:$p('pf_kind').value,grade:$p('pf_grade').value,step:$p('pf_step').value,fixed:$p('pf_fixed').value};
-  const b=baseOf(p);$p('pf_calc').textContent=b==null?'基本給：—（級・号か固定額を入れる）':'基本給：'+yen(b)+(p.kind==='パート'?' 円/h':' 円')+(p.fixed!==''?'（固定）':'　表から');
+  const b=baseOf(p);$p('pf_calc').textContent=b==null?'基本給：—':'基本給：'+yen(b);
 }
 function payEdit(i){
   payEditing=i;const p=i>=0?payData.people[i]:{name:'',kind:'社員',pos:'一般',grade:'',step:'',fixed:'',post:'',qual:'',note:'',hist:[]};
@@ -239,15 +238,15 @@ async function paySaveRow(){
 }
 async function payDel(){
   if(payEditing<0)return;const p=payData.people[payEditing];
-  if(!confirm(p.name+' を台帳から消す？'))return;
+  if(!confirm(p.name+' を消す？'))return;
   const bak=payData.people.slice();payData.people.splice(payEditing,1);payMoClose();payRender();
   if(!await payCommit()){payData.people=bak;payRender()}
 }
 async function payCfg(){
   const c=payData.cfg;
-  const e=prompt('1級1号（社員の入口）',c.entry);if(e==null)return;
-  const pe=prompt('パート1号（時給の入口）',c.partEntry);if(pe==null)return;
-  const mw=prompt('最低賃金（時給）',c.minWage);if(mw==null)return;
+  const e=prompt('1級1号',c.entry);if(e==null)return;
+  const pe=prompt('パート1号',c.partEntry);if(pe==null)return;
+  const mw=prompt('最低賃金',c.minWage);if(mw==null)return;
   const bak=Object.assign({},c);payData.cfg={entry:+e||c.entry,partEntry:+pe||c.partEntry,minWage:+mw||c.minWage,hours:c.hours||161.33};
   payRender();if(!await payCommit()){payData.cfg=bak;payRender()}
 }
@@ -255,7 +254,7 @@ document.getElementById('payFile').addEventListener('change',async ev=>{
   const f=ev.target.files[0];ev.target.value='';if(!f)return;
   try{
     const d=JSON.parse(await f.text());const people=d.people||d;if(!Array.isArray(people)||!people.length)throw new Error('people の配列がありません');
-    if(!confirm(people.length+' 人を読み込みました。今の台帳と入れ替えますか？（今の中身は消えます）'))return;
+    if(!confirm(people.length+' 人。今の台帳と入れ替える？'))return;
     const bak=payData;payData={v:3,cfg:d.cfg||payData.cfg,people:people.map(p=>Object.assign({hist:[]},p))};
     payRender();if(!await payCommit()){payData=bak;payRender()}
   }catch(e){alert('読み込めません：'+(e&&e.message||e))}
