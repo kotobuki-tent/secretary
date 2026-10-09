@@ -5,9 +5,12 @@
      開くと業務管理API（GAS）から日報・休み・対象者・身元記録を取り、その場で集計する。ファイルを持っている人だけが見られる。 -->
 <style>
 :root{--text:#1a1d27;--dim:#6b7280;--faint:#9aa0ad;--border:#e5e7eb;--surface:#fff;--surface2:#f3f4f6;--accent:#3b82f6;--green:#16a34a;--orange:#f59e0b;--red:#dc2626}
-body{margin:0;background:#f5f6fa;color:var(--text);font:14px/1.5 'Noto Sans JP',-apple-system,'Hiragino Sans','Meiryo',sans-serif}
-.wrap{max-width:900px;margin:0 auto;padding:20px 16px 60px}
-h1{font-size:18px;margin:0 0 4px}.sub{color:var(--dim);font-size:12px;margin-bottom:18px}
+body{margin:0;overflow:hidden;background:#f5f6fa;color:var(--text);font:14px/1.5 'Noto Sans JP',-apple-system,'Hiragino Sans','Meiryo',sans-serif}
+.wrap{max-width:1500px;margin:0 auto;padding:14px 16px 0;box-sizing:border-box;height:100vh;display:flex;flex-direction:column}
+.cols{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;flex:1 1 auto;min-height:0}
+.cols>div{overflow-y:auto;min-height:0;padding:0 4px 24px 0;scrollbar-width:thin}
+@media(max-width:1000px){body{overflow:auto}.wrap{height:auto;display:block;padding-bottom:60px}.cols{display:block}.cols>div{overflow:visible;padding:0}}
+h1{font-size:18px;margin:0 0 4px}.sub{color:var(--dim);font-size:12px;margin-bottom:12px}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:16px}
 .card h2{font-size:15px;margin:0 0 10px}
 .stats-sub{font-size:14px}.stats-sub b{color:var(--accent)}
@@ -33,10 +36,13 @@ td.name{font-weight:600;font-size:13px}td.sub{color:var(--dim)}
 </style></head>
 <body><div class="wrap">
 <div class="top"><div><h1>寿テント 経営</h1><div class="sub" id="who">読み込み中…</div></div><button class="btn" onclick="load()">↻ 更新</button></div>
+<div class="cols"><div>
 <div class="card"><h2>日報の記入状況</h2><div id="stats" class="loading">読み込み中…</div></div>
+</div><div>
 <div class="card"><h2>人事考課</h2><a class="btn" id="hr" target="_blank" rel="noopener">人事考課を開く（経営）</a></div>
 <div class="card"><h2>誰がどこから使っているか</h2><div class="stats-note">業務管理を開いた人と端末の一覧（新しい順）。<b style="color:var(--green)">通過</b>＝使えている／<b style="color:var(--red)">拒否</b>＝「認証が切れました」が出ている。</div><div id="who2" class="loading">読み込み中…</div>
 <details style="margin-top:12px"><summary style="cursor:pointer;color:var(--dim);font-size:12px">生の記録を見る（直近100件）</summary><div id="auth" style="margin-top:8px"></div></details></div>
+</div></div>
 </div>
 <script>
 const API='https://script.google.com/macros/s/AKfycbwD5F1rJcdg7pl1lnVXzyY0vttcO88z-YKUZWG3eLIT0DNMhFZw8jXbJoKW6wCIKEC7/exec';
