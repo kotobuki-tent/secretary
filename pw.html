@@ -5,7 +5,7 @@
 <meta charset="utf-8"><meta name="robots" content="noindex">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <!-- つなぐ先は業務管理の GAS だけ。外部のスクリプト・フォント・画像は読まない -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data:; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <title>PW管理</title>
 <!--
@@ -18,64 +18,59 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap');
 :root{
-  --bg:#f4f2ee; --surface:#fffdf9; --line:#ddd7cc; --text:#1f1d1a; --dim:#77706a;
-  --accent:#1d5f4a; --accent-ink:#fff; --soft:#eef3ef; --warn:#a4321f; --chip:#ece7de;
-  --shadow:0 1px 2px rgba(0,0,0,.06),0 6px 20px rgba(0,0,0,.06);
+  --bg:#f6f7f8; --surface:#fff; --line:#e4e4e4; --text:#222; --dim:#777;
+  --accent:#2b6; --accent-ink:#fff; --soft:#f3f4f5; --warn:#c33; --chip:#f0f0f0;
+  --shadow:none;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,"MS Gothic",monospace;
-}
-@media (prefers-color-scheme:dark){
-  :root{ --bg:#16181a; --surface:#1f2225; --line:#33383d; --text:#ece9e4; --dim:#9a968f;
-    --accent:#5fc3a0; --accent-ink:#0d1f19; --soft:#22302b; --warn:#f08a76; --chip:#2a2e32;
-    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); }
 }
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--text);font:15px/1.6 'Hiragino Sans','Noto Sans JP',sans-serif;-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
-button{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 14px;white-space:nowrap}
+button{cursor:pointer;border:1px solid #bbb;background:#fff;border-radius:4px;padding:4px 10px;white-space:nowrap;font-weight:600}
 button:hover{border-color:var(--accent)}
-button.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button.pri{background:#222;color:#fff;border-color:#222}
 button.danger{color:var(--warn)}
 button:disabled{opacity:.45;cursor:default}
-input,select,textarea{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:9px 11px;width:100%}
+input,select,textarea{border:1px solid #bbb;background:#fff;border-radius:4px;padding:5px 8px;width:100%}
 input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .hidden{display:none!important}
 
-header.bar{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-.barin{max-width:none;margin:0;padding:12px 24px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.barin h1{font-size:17px;margin:0 6px 0 0;display:flex;align-items:center;gap:8px}
+header.bar{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid #ddd}
+.barin{max-width:none;margin:0;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.barin h1{display:none}
 .barin h1 span.mk{width:26px;height:26px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:inline-grid;place-items:center;font-size:14px}
-#q{flex:1;min-width:180px}
-.state{font-size:12.5px;color:var(--dim);white-space:nowrap}
+#q{flex:0 1 320px;min-width:160px}
+.state{font-size:13px;color:var(--dim);white-space:nowrap;margin-left:auto}
 .state.bad{color:var(--warn);font-weight:600;cursor:pointer;text-decoration:underline}
-main{max-width:none;margin:0;padding:14px 24px 80px}
-.chips{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 14px}
-.chip{border:1px solid var(--line);background:var(--chip);border-radius:999px;padding:4px 12px;font-size:13px}
-.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.tw{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+main{max-width:none;margin:0;padding:10px 12px 60px}
+.chips{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 8px}
+.chip{border:1px solid #bbb;background:#fff;border-radius:4px;padding:2px 10px;font-size:14px}
+.chip.on{background:#222;color:#fff;border-color:#222}
+.tw{background:#fbfbfb;border:1px solid var(--line);border-radius:6px;overflow-x:auto}
 table.led{width:100%;border-collapse:collapse;font-size:14px}
-table.led th{background:var(--chip);text-align:left;font-weight:600;font-size:12.5px;color:var(--dim);padding:9px 12px;white-space:nowrap;cursor:pointer;user-select:none}
+table.led th{background:#f0f0f0;text-align:left;font-weight:600;font-size:13px;color:var(--dim);padding:5px 10px;white-space:nowrap;cursor:pointer;user-select:none}
 table.led th:hover{color:var(--accent)}
 table.led th .ar{font-size:10px;margin-left:3px}
 table.led th.nosort{cursor:default}
-table.led td{padding:8px 12px;border-top:1px solid var(--line);vertical-align:middle}
+table.led td{padding:5px 10px;border-top:1px solid var(--line);vertical-align:middle}
 table.led tr:hover td{background:var(--soft)}
-.tag{display:inline-block;padding:1px 8px;border-radius:5px;font-size:11.5px;font-weight:600;background:var(--chip);color:var(--dim);white-space:nowrap}
+.tag{display:inline-block;padding:0 6px;border-radius:3px;font-size:12px;font-weight:600;background:var(--chip);color:var(--dim);white-space:nowrap}
 .nm{font-weight:650;white-space:nowrap}
 .nm a{color:inherit;text-decoration:none;border-bottom:1px dotted var(--dim)}
-.sub{font-size:12.5px;color:var(--dim);overflow-wrap:anywhere}
-.cp{font-family:var(--mono);font-size:13.5px;cursor:pointer;padding:3px 6px;margin:-3px -6px;border-radius:6px;display:inline-block;white-space:nowrap}
+.sub{font-size:13px;color:var(--dim);overflow-wrap:anywhere}
+.cp{font-family:var(--mono);font-size:13px;cursor:pointer;padding:2px 5px;margin:-2px -5px;border-radius:3px;display:inline-block;white-space:nowrap}
 .cp:hover{background:color-mix(in srgb,var(--accent) 16%,transparent)}
-td.memo{font-size:12.5px;color:var(--dim);min-width:160px;overflow-wrap:anywhere;white-space:pre-wrap}
+td.memo{font-size:13px;color:var(--dim);min-width:160px;overflow-wrap:anywhere;white-space:pre-wrap}
 td.dt{font-size:12px;color:var(--dim);white-space:nowrap}
-a.ed{color:var(--accent);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+a.ed{color:#2b6;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
 a.ed:hover{text-decoration:underline}
 .empty{text-align:center;color:var(--dim);padding:60px 10px}
 
 .bg{position:fixed;inset:0;background:rgba(0,0,0,.42);display:grid;place-items:center;padding:16px;z-index:20}
-.dlg{width:min(600px,100%);max-height:92vh;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:22px}
-.dlg h3{margin:0 0 14px;font-size:17px}
-.row{display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:center;margin-bottom:10px}
+.dlg{width:min(560px,100%);max-height:92vh;overflow:auto;background:#fff;border:1px solid #ccc;border-radius:6px;padding:14px 16px}
+.dlg h3{margin:0 0 10px;font-size:15px}
+.row{display:grid;grid-template-columns:72px 1fr;gap:8px;align-items:center;margin-bottom:8px}
 .row label{font-size:13px;color:var(--dim)}
 .inline{display:flex;gap:6px;align-items:center}
 .foot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
@@ -84,26 +79,26 @@ table.map{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
 table.map th,table.map td{border:1px solid var(--line);padding:5px 7px;text-align:left;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 table.map th{background:var(--chip);font-weight:600}
 table.map select{padding:4px 6px;font-size:12.5px}
-#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .18s;z-index:40}
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#222;color:#fff;padding:6px 14px;border-radius:4px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .18s;z-index:40}
 #toast.on{opacity:1}
-menu{position:absolute;right:24px;top:54px;margin:0;padding:6px;list-style:none;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);min-width:230px;z-index:10}
-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;border-radius:8px}
+menu{position:absolute;right:12px;top:44px;margin:0;padding:4px;list-style:none;background:#fff;border:1px solid #bbb;border-radius:4px;min-width:120px;z-index:10}
+menu button{display:block;width:100%;text-align:left;border:0;background:transparent;border-radius:3px;font-weight:400}
 menu button:hover{background:var(--soft)}
 </style>
 </head>
 <body>
 
 <header class="bar"><div class="barin">
-  <h1><span class="mk">🔑</span>PW管理</h1>
-  <input type="search" id="q" placeholder="さがす（名前・ID・URL・メモ）" autocomplete="off">
-  <button class="pri" id="btnAdd" disabled>＋ 追加</button>
+  <h1>PW管理</h1>
+  <input type="search" id="q" placeholder="検索" autocomplete="off">
+  <button class="pri" id="btnAdd" disabled>追加</button>
   <span class="state" id="state">読み込み中…</span>
   <button id="btnReload">更新</button>
   <button id="btnMenu" aria-label="メニュー">⋯</button>
 </div>
 <menu id="menu" class="hidden">
-  <li><button data-act="import">Excel から取り込む（貼り付け）</button></li>
-  <li><button data-act="csv">CSV に書き出す（控え）</button></li>
+  <li><button data-act="import">取込</button></li>
+  <li><button data-act="csv">書出</button></li>
 </menu></header>
 <main>
   <div class="chips" id="chips"></div>
@@ -113,11 +108,11 @@ menu button:hover{background:var(--soft)}
 <!-- 追加・編集 -->
 <div class="bg hidden" id="dlgEdit"><form class="dlg" autocomplete="off">
   <h3 id="edTitle">追加</h3>
-  <div class="row"><label>分類</label><input id="edCat" list="catList" placeholder="サービスの名前。例：Gmail、KING OF TIME"><datalist id="catList"></datalist></div>
-  <div class="row"><label>名前</label><input id="edName" placeholder="どのアカウントか。例：管理者、共用、岸田平"></div>
+  <div class="row"><label>分類</label><input id="edCat" list="catList"><datalist id="catList"></datalist></div>
+  <div class="row"><label>名前</label><input id="edName"></div>
   <div class="row"><label>ID</label><input id="edUser" autocomplete="off" spellcheck="false"></div>
   <div class="row"><label>PW</label><div class="inline"><input id="edPw" autocomplete="off" spellcheck="false" style="font-family:var(--mono)"><button type="button" id="edGen">作る</button></div></div>
-  <div class="row"><label>URL</label><input id="edUrl" placeholder="https://" spellcheck="false"></div>
+  <div class="row"><label>URL</label><input id="edUrl" spellcheck="false"></div>
   <div class="row" style="align-items:start"><label>メモ</label><textarea id="edNote" rows="3"></textarea></div>
   <div class="foot">
     <button type="button" class="danger left hidden" id="edDel">削除</button>
@@ -128,11 +123,10 @@ menu button:hover{background:var(--soft)}
 
 <!-- 取り込み -->
 <div class="bg hidden" id="dlgImp"><div class="dlg">
-  <h3>Excel から取り込む</h3>
-  <p class="sub" style="margin:0 0 8px">Excel で表を選んでコピーし、下に貼り付けます。1マスだけ字がある行は「分類の見出し」として扱います。</p>
-  <textarea id="impText" rows="6" placeholder="ここに貼り付け" spellcheck="false" style="font-family:var(--mono);font-size:12px"></textarea>
-  <div class="row" style="margin-top:10px"><label>分類（既定）</label><input id="impCat" placeholder="見出しの無い行に付ける分類。例：メール"></div>
-  <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin:4px 0 2px;cursor:pointer"><input type="checkbox" id="impReplace" style="width:auto">今ある物を全部消して、これに入れ替える</label>
+  <h3>取込</h3>
+  <textarea id="impText" rows="6" placeholder="貼り付け" spellcheck="false" style="font-family:var(--mono);font-size:12px"></textarea>
+  <div class="row" style="margin-top:10px"><label>分類（既定）</label><input id="impCat"></div>
+  <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin:4px 0 2px;cursor:pointer"><input type="checkbox" id="impReplace" style="width:auto">入れ替え</label>
   <div id="impMap"></div>
   <div class="foot">
     <span class="sub left" id="impInfo"></span>
