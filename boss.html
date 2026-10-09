@@ -3,6 +3,7 @@
 <script>(function(){try{if(!localStorage.getItem('sec_bk')){document.addEventListener('DOMContentLoaded',function(){document.body.innerHTML='<p style="font-family:sans-serif;padding:2em">鍵がありません。秘書の画面を、鍵付きの URL（?bk=…&dk=…）で一度開いてください。</p>'})}}catch(e){}})();</script><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width, initial-scale=1"><title>寿テント 経営</title>
 <!-- 経営者ページ（ローカル版、2026-09-17）。このファイルは経営専用の鍵（読み取りだけ）と人事考課のキーを含む。公開の場所・リポジトリに置かない。
      開くと業務管理API（GAS）から日報・休み・対象者・身元記録を取り、その場で集計する。ファイルを持っている人だけが見られる。 -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>
 :root{--text:#1a1d27;--dim:#6b7280;--faint:#9aa0ad;--border:#e5e7eb;--surface:#fff;--surface2:#f3f4f6;--accent:#3b82f6;--green:#16a34a;--orange:#f59e0b;--red:#dc2626}
 body{margin:0;overflow:hidden;background:#f5f6fa;color:var(--text);font:14px/1.5 'Noto Sans JP',-apple-system,'Hiragino Sans','Meiryo',sans-serif}
@@ -49,7 +50,7 @@ td.name{font-weight:600;font-size:13px}td.sub{color:var(--dim)}
 <div class="card"><h2>人事考課</h2><a class="btn" id="hr" target="_blank" rel="noopener">人事考課を開く（経営）</a></div>
 <div class="card"><h2>給料台帳</h2>
 <div id="pay" class="loading">読み込み中…</div>
-<div class="pay-foot"><span id="payMeta"></span><span class="pay-btns"><button class="btn sm" onclick="payEdit(-1)">＋ 人を足す</button><button class="btn sm gray" onclick="payCfg()">表の設定</button><label class="btn sm gray" style="cursor:pointer">読み込む<input type="file" id="payFile" accept=".json" style="display:none"></label><button class="btn sm gray" onclick="payExport()">書き出す</button></span></div></div>
+<div class="pay-foot"><span id="payMeta"></span><span class="pay-btns"><button class="btn sm" onclick="payEdit(-1)">＋ 人を足す</button><button class="btn sm gray" onclick="payCfg()">表の設定</button><label class="btn sm gray" style="cursor:pointer">読み込む<input type="file" id="payFile" accept=".xlsx,.json" style="display:none"></label><button class="btn sm gray" onclick="payExport()">書き出す</button></span></div></div>
 <div class="mo-bg" id="payMo"><div class="mo"><h3 id="payMoTitle">給料</h3>
 <div class="f2"><label>氏名<input id="pf_name"></label><label>区分<select id="pf_kind"><option>役員</option><option>執行役員</option><option>社員</option><option>パート</option></select></label></div>
 <div class="f2"><label>職位<input id="pf_pos"></label><label>級<input id="pf_grade" type="number" min="1" max="5" inputmode="numeric"></label></div>
@@ -221,15 +222,37 @@ async function payCfg(){
 document.getElementById('payFile').addEventListener('change',async ev=>{
   const f=ev.target.files[0];ev.target.value='';if(!f)return;
   try{
-    const d=JSON.parse(await f.text());const people=d.people||d;if(!Array.isArray(people)||!people.length)throw new Error('people の配列がありません');
+    let d,people;
+    if(/\.json$/i.test(f.name)){d=JSON.parse(await f.text());people=d.people||d;}
+    else{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+      const hi=rows.findIndex(r=>r&&r.indexOf('氏名')>=0);if(hi<0)throw new Error('見出し（氏名）がありません');
+      const H=rows[hi],col=n=>H.findIndex(x=>String(x||'').replace(/\s/g,'').indexOf(n)===0);
+      const c={name:col('氏名'),kind:col('区分'),pos:col('職位'),grade:col('級'),step:col('号'),base:col('基本給'),post:col('役職'),qual:col('資格'),note:col('備考')};
+      const nv=v=>(v==null||v==='')?'':(+String(v).replace(/[,，円]/g,'')||'');
+      people=[];const old={};payData.people.forEach(p=>old[p.name]=p);
+      rows.slice(hi+1).forEach(r=>{if(!r||!r[c.name])return;const name=String(r[c.name]).trim(),kind=String(r[c.kind]||'社員').trim(),grade=nv(r[c.grade]),step=nv(r[c.step]),base=nv(r[c.base]);
+        const fixed=(kind==='社員'&&grade&&step)||(kind==='パート'&&step)?'':base;
+        people.push({name,kind,pos:String(r[c.pos]||'').trim(),grade:kind==='パート'?'':grade,step,fixed,post:nv(r[c.post]),qual:nv(r[c.qual]),note:String(r[c.note]||'').trim(),hist:(old[name]&&old[name].hist)||[]});});
+      d={cfg:payData.cfg};}
+    if(!Array.isArray(people)||!people.length)throw new Error('人の行がありません');
     if(!confirm(people.length+' 人。今の台帳と入れ替える？'))return;
     const bak=payData;payData={v:3,cfg:d.cfg||payData.cfg,people:people.map(p=>Object.assign({hist:[]},p))};
     payRender();if(!await payCommit()){payData=bak;payRender()}
   }catch(e){alert('読み込めません：'+(e&&e.message||e))}
 });
 function payExport(){
-  const b=new Blob([JSON.stringify(payData,null,1)],{type:'application/json'}),a=document.createElement('a');
-  a.href=URL.createObjectURL(b);a.download='給料台帳_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  const floor=payFloor(),amt=p=>{const b=baseOf(p);if(b==null)return -1;return p.kind==='パート'?b:b+(num(p.post)||0)+(num(p.qual)||0)};
+  const list=payData.people.map((p,i)=>({p,i,a:amt(p)})).sort((x,y)=>y.a-x.a||x.i-y.i).map(x=>x.p);
+  const aoa=[['氏名','区分','職位','級','号','基本給','役職手当','資格手当','月額','備考']];
+  list.forEach(p=>{const part=p.kind==='パート',b=baseOf(p);aoa.push([p.name,p.kind,p.pos||'',part?'':(p.grade||''),p.step||'',b==null?'':b,num(p.post)||'',num(p.qual)||'',(b!=null&&!part)?b+(num(p.post)||0)+(num(p.qual)||0):'',p.note||''])});
+  const ws=XLSX.utils.aoa_to_sheet(aoa),B='D1D5DB',bd={top:{style:'thin',color:{rgb:B}},bottom:{style:'thin',color:{rgb:B}},left:{style:'thin',color:{rgb:B}},right:{style:'thin',color:{rgb:B}}};
+  ws['!cols']=[{wch:13},{wch:8},{wch:8},{wch:4},{wch:4},{wch:10},{wch:9},{wch:9},{wch:10},{wch:34}];
+  for(let r=0;r<aoa.length;r++)for(let c=0;c<10;c++){const ref=XLSX.utils.encode_cell({r,c});if(!ws[ref])ws[ref]={t:'s',v:''};
+    const numc=c>=3&&c<=8, low=r>0&&(()=>{const p=list[r-1],b=baseOf(p);return b!=null&&(p.kind==='パート'?b<payData.cfg.minWage:(p.kind==='社員'&&b<floor))})();
+    ws[ref].s={font:{name:'Meiryo UI',sz:10,bold:r===0||c===8},fill:r===0?{fgColor:{rgb:'E5E7EB'}}:(low?{fgColor:{rgb:'FEE2E2'}}:undefined),alignment:{horizontal:numc?'right':'left',vertical:'center'},border:bd};
+    if(r>0&&c>=5&&c<=8&&typeof ws[ref].v==='number')ws[ref].z='#,##0';}
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'給料台帳');
+  XLSX.writeFile(wb,'給料台帳_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$p('payMo').classList.contains('show'))payMoClose()});
 if(KEY){load();payLoad()}
