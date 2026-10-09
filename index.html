@@ -76,7 +76,7 @@ try{ var _q=new URLSearchParams(location.search), _bk=_q.get('bk'), _dk=_q.get('
 function showTab(t){
   document.body.classList.remove('t-boss','t-pw'); if(t!=='sec') document.body.classList.add('t-'+t);
   document.querySelectorAll('.tabs button').forEach(function(b){b.classList.toggle('on',b.dataset.t===t)});
-  ['boss','pw'].forEach(function(n){var f=document.getElementById('fr_'+n); f.classList.toggle('off',t!==n); if(t===n&&!f.src) f.src=n+'.html';});
+  ['boss','pw'].forEach(function(n){var f=document.getElementById('fr_'+n); f.classList.toggle('off',t!==n); if(t===n&&!f.src) f.src=n+'.html?v='+Date.now();});
   try{localStorage.setItem('sec_tab',t)}catch(e){}
 }
 try{ var _t=localStorage.getItem('sec_tab'); if(_t&&_t!=='sec') showTab(_t); }catch(e){}
