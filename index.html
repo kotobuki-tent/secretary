@@ -48,6 +48,7 @@ details summary{cursor:pointer;color:#666;font-size:15px}
 <body>
 <header>
   <h1>秘書</h1>
+  <a id="keiei" href="./keiei.html" style="display:none;border:1px solid #bbb;background:#fff;color:#222;padding:4px 12px;border-radius:4px;text-decoration:none;font-weight:600;margin-right:6px">経営</a>
   <span class="sel"><button data-d="1">今日</button><button data-d="3" class="on">3日</button><button data-d="7">1週間</button></span>
   <span class="st" id="st"></span>
   <button class="sync" onclick="syncNow()">今すぐ更新</button>
@@ -59,6 +60,7 @@ details summary{cursor:pointer;color:#666;font-size:15px}
 var API='https://script.google.com/macros/s/AKfycbz1HO0bfr65_IhCisT4Q-zR6YZ-mQUEdRx7qfSqHLLoeVsVPCeaL48dn0b9w1xtfYUS/exec';
 var K=(new URLSearchParams(location.search).get('k')||'');
 try{ if(K) localStorage.setItem('sec_k',K); else K=localStorage.getItem('sec_k')||''; }catch(e){}
+try{ if(localStorage.getItem('sec_bk')) document.getElementById('keiei').style.display=''; }catch(e){}
 try{ var _q=new URLSearchParams(location.search); if(_q.get('k')){ _q.delete('k'); history.replaceState(null,'',location.pathname+(_q.toString()?'?'+_q.toString():'')); } }catch(e){}
 // 合言葉（10/9 iller「単独にしてくれ。合言葉つきで。遠藤未来にも見てもらう」）：無ければ入力欄、違えば入れ直し
 function gate(msg){
