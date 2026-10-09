@@ -23,7 +23,7 @@ header .tabs.off{display:none}
 body.t-boss main,body.t-pw main,body.t-boss header .sel,body.t-pw header .sel,body.t-boss header .st,body.t-pw header .st,body.t-boss header .sync,body.t-pw header .sync{display:none}
 header .sel button{border:1px solid #bbb;background:#fff;padding:4px 10px;border-radius:4px;cursor:pointer}
 header .sel button.on{background:#222;color:#fff;border-color:#222}
-header .st{color:#777;font-size:13px;margin-left:auto}
+header .st{color:#777;font-size:13px}
 header .sync{border:1px solid #2b6;color:#2b6;background:#fff;padding:4px 10px;border-radius:4px;cursor:pointer}
 main{max-width:1700px;margin:0 auto;padding:10px 12px 60px}
 .cols{display:grid;grid-template-columns:1fr;gap:0 14px}
@@ -55,8 +55,8 @@ details summary{cursor:pointer;color:#666;font-size:13px}
 <body>
 <header>
   <h1>秘書</h1>
-  <nav class="tabs" id="tabs"><button class="on" data-t="sec" onclick="showTab('sec')">秘書</button><button data-t="boss" onclick="showTab('boss')">経営</button><button data-t="pw" onclick="showTab('pw')">PW</button></nav>
-  <span class="sel"><button data-d="1">今日</button><button data-d="3" class="on">3日</button><button data-d="7">1週間</button></span>
+  <nav class="tabs" id="tabs"><button class="on" data-t="sec" onclick="showTab('sec')">メール</button><button data-t="boss" onclick="showTab('boss')">経営</button><button data-t="pw" onclick="showTab('pw')">PW</button></nav>
+  <span class="sel" style="margin-left:auto"><button data-d="1">今日</button><button data-d="3" class="on">3日</button><button data-d="7">1週間</button></span>
   <span class="st" id="st"></span>
   <button class="sync" onclick="syncNow()">今すぐ更新</button>
 </header>
