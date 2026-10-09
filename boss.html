@@ -3,6 +3,7 @@
 <script>(function(){try{if(!localStorage.getItem('sec_bk')){document.addEventListener('DOMContentLoaded',function(){document.body.innerHTML='<p style="font-family:sans-serif;padding:2em">鍵がありません。秘書の画面を、鍵付きの URL（?bk=…&dk=…）で一度開いてください。</p>'})}}catch(e){}})();</script><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width, initial-scale=1"><title>寿テント 経営</title>
 <!-- 経営者ページ（ローカル版、2026-09-17）。このファイルは経営専用の鍵（読み取りだけ）と人事考課のキーを含む。公開の場所・リポジトリに置かない。
      開くと業務管理API（GAS）から日報・休み・対象者・身元記録を取り、その場で集計する。ファイルを持っている人だけが見られる。 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{--text:#1a1d27;--dim:#6b7280;--faint:#9aa0ad;--border:#e5e7eb;--surface:#fff;--surface2:#f3f4f6;--accent:#3b82f6;--green:#16a34a;--orange:#f59e0b;--red:#dc2626}
 body{margin:0;overflow:hidden;background:#f5f6fa;color:var(--text);font:14px/1.5 'Noto Sans JP',-apple-system,'Hiragino Sans','Meiryo',sans-serif}
@@ -33,6 +34,9 @@ tr.rej td{background:#fef2f2}.loading{color:var(--faint);padding:20px;text-align
 .pill.ok{background:#dcfce7;color:#166534}.pill.ng{background:#fee2e2;color:#991b1b}.pill.old{background:#f3f4f6;color:#6b7280}
 td.name{font-weight:600;font-size:13px}td.sub{color:var(--dim)}
 .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.pay td.num{text-align:right;font-variant-numeric:tabular-nums}.pay th.num{text-align:right}.pay tr.sep td{border-top:2px solid var(--border)}
+.pay-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;font-size:12px;color:var(--dim)}
+.btn.sm{padding:6px 12px;font-size:12px}.btn.gray{background:var(--surface2);color:var(--text)}
 </style></head>
 <body><div class="wrap">
 <div class="top"><div><h1>寿テント 経営</h1><div class="sub" id="who">読み込み中…</div></div><button class="btn" onclick="load()">↻ 更新</button></div>
@@ -40,6 +44,9 @@ td.name{font-weight:600;font-size:13px}td.sub{color:var(--dim)}
 <div class="card"><h2>日報の記入状況</h2><div id="stats" class="loading">読み込み中…</div></div>
 </div><div>
 <div class="card"><h2>人事考課</h2><a class="btn" id="hr" target="_blank" rel="noopener">人事考課を開く（経営）</a></div>
+<div class="card"><h2>給料</h2><div class="stats-note">給与台帳（🍅給与・考課/2_毎年の考課/寿テント_給与台帳.xlsx）の「社員マスター」の写し。中身は暗号にして預けてあり、鍵のある端末だけ読める。</div>
+<div id="pay" class="loading">読み込み中…</div>
+<div class="pay-foot"><span id="payMeta"></span><span><label class="btn sm gray" style="cursor:pointer">台帳を読み込む<input type="file" id="payFile" accept=".xlsx" style="display:none"></label></span></div></div>
 <div class="card"><h2>誰がどこから使っているか</h2><div class="stats-note">業務管理を開いた人と端末の一覧（新しい順）。<b style="color:var(--green)">通過</b>＝使えている／<b style="color:var(--red)">拒否</b>＝「認証が切れました」が出ている。</div><div id="who2" class="loading">読み込み中…</div>
 <details style="margin-top:12px"><summary style="cursor:pointer;color:var(--dim);font-size:12px">生の記録を見る（直近100件）</summary><div id="auth" style="margin-top:8px"></div></details></div>
 </div></div>
@@ -120,5 +127,66 @@ async function load(){
     document.getElementById('who').textContent='更新 '+new Date().toLocaleString('ja-JP');
   }catch(e){document.getElementById('who').innerHTML='<span class="err">取得に失敗：'+esc(e.message)+'</span>'}
 }
-if(KEY)load();
+// ---- 給料（台帳の写し、暗号で GAS に預ける。dept=pw&vault=pay、鍵は PW管理 と同じ DK）----
+const DK=(function(){try{return localStorage.getItem('sec_dk')||''}catch(e){return ''}})();
+const PAY_CID='boss-local';
+const _enc=new TextEncoder(),_dec=new TextDecoder();
+const _b64=u=>{let t='';const a=new Uint8Array(u);for(let i=0;i<a.length;i++)t+=String.fromCharCode(a[i]);return btoa(t)};
+const _unb64=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
+let _pk=null;
+async function payKey(){return _pk||(_pk=await crypto.subtle.importKey('raw',_unb64(DK),'AES-GCM',false,['encrypt','decrypt']))}
+async function paySeal(obj){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},await payKey(),_enc.encode(JSON.stringify(obj)));return 'v1.'+_b64(iv)+'.'+_b64(ct)}
+async function payUnseal(blob){const p=String(blob).split('.');if(p[0]!=='v1'||p.length!==3)throw new Error('format');return JSON.parse(_dec.decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:_unb64(p[1])},await payKey(),_unb64(p[2]))))}
+async function payRead(){const r=await fetch(API+'?'+new URLSearchParams({dept:'pw',vault:'pay',action:'read',key:KEY,cid:PAY_CID,t:Date.now()}));return r.json()}
+async function paySave(blob,base){const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({dept:'pw',vault:'pay',action:'save',key:KEY,cid:PAY_CID,base,blob})});return r.json()}
+const yen=n=>(n==null||n==='')?'':Number(n).toLocaleString('ja-JP');
+function payRender(d){
+  const el=document.getElementById('pay'),meta=document.getElementById('payMeta');
+  if(!d||!d.items||!d.items.length){el.className='loading';el.textContent='まだ台帳を読み込んでいません';meta.textContent='';return}
+  let h='<table class="pay"><tr><th>氏名</th><th>職位</th><th>区分</th><th class="num">級</th><th class="num">号</th><th class="num">基本給／時給</th><th class="num">役職</th><th class="num">資格</th><th class="num">月額</th></tr>';
+  let prev='';
+  d.items.forEach(r=>{
+    const part=/パート/.test(r.kind||''), tot=part?'':yen((+r.base||0)+(+r.post||0)+(+r.qual||0));
+    h+=`<tr class="${prev&&prev!==r.kind?'sep':''}"><td class="name">${esc(r.name)}</td><td class="sub">${esc(r.pos)}</td><td class="sub">${esc(r.kind)}</td><td class="num">${esc(r.grade)}</td><td class="num">${esc(r.step)}</td><td class="num">${yen(r.base)}${part?' <span class="sub">/h</span>':''}</td><td class="num">${yen(r.post)}</td><td class="num">${yen(r.qual)}</td><td class="num"><b>${tot}</b></td></tr>`;
+    prev=r.kind;
+  });
+  el.className='';el.innerHTML=h+'</table>';
+  meta.textContent=(d.src?d.src+'　':'')+(d.at?'読み込み '+d.at:'')+'　'+d.items.length+'人';
+}
+async function payLoad(){
+  const el=document.getElementById('pay');
+  if(!DK){el.className='loading';el.textContent='暗号の鍵（dk）がこの端末にありません';return}
+  try{const j=await payRead();if(!j.success){el.className='loading';el.textContent=j.error==='auth'?'鍵が通りません':'読み込めません';return}
+    payRender(j.blob?await payUnseal(j.blob):null);
+  }catch(e){el.className='loading';el.textContent=e&&e.message==='format'||e instanceof DOMException?'暗号を開けません（鍵が違う）':'つながりません'}
+}
+function payParse(buf){
+  const wb=XLSX.read(buf,{type:'array'}),ws=wb.Sheets['社員マスター'];
+  if(!ws)throw new Error('「社員マスター」のシートがありません');
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+  let hi=rows.findIndex(r=>r&&r[0]==='氏名');if(hi<0)throw new Error('見出し（氏名）が見つかりません');
+  const H=rows[hi],col=n=>H.findIndex(x=>String(x||'').indexOf(n)===0);
+  const c={name:col('氏名'),pos:col('職位'),kind:col('区分'),grade:col('級'),step:col('号'),base:col('基本給'),post:col('役職手当'),qual:col('資格手当'),note:col('備考')};
+  const items=[];
+  for(const r of rows.slice(hi+1)){
+    if(!r||!r[c.name])continue;
+    const kind=String(r[c.kind]||'');if(/退職/.test(kind))continue;
+    items.push({name:String(r[c.name]).trim(),pos:r[c.pos]||'',kind,grade:r[c.grade]??'',step:r[c.step]??'',base:r[c.base]??'',post:r[c.post]??'',qual:r[c.qual]??'',note:r[c.note]||''});
+  }
+  if(!items.length)throw new Error('人の行がありません');
+  return items;
+}
+document.getElementById('payFile').addEventListener('change',async ev=>{
+  const f=ev.target.files[0];ev.target.value='';if(!f)return;
+  const el=document.getElementById('pay');
+  try{
+    const items=payParse(await f.arrayBuffer());
+    if(!confirm(items.length+' 人を読み込みました。今の表と入れ替えますか？'))return;
+    el.className='loading';el.textContent='保存中…';
+    const d={v:1,src:f.name,at:new Date().toLocaleString('ja-JP'),items},blob=await paySeal(d);
+    for(let i=0;i<2;i++){const cur=await payRead();const j=await paySave(blob,cur.id||'');if(j.success){payRender(d);return}if(j.error!=='conflict')throw new Error(j.error==='auth'?'鍵が通りません':j.error==='too_large'?'大きすぎて保存できません':'保存できません')}
+    throw new Error('保存できません（同時に誰かが保存）');
+  }catch(e){alert('読み込めません：'+(e&&e.message||e));payLoad()}
+});
+if(KEY){load();payLoad()}
 </script></body></html>
