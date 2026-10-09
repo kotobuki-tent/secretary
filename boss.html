@@ -170,13 +170,12 @@ function payRender(){
   if(!payData.people.length){el.className='loading';el.textContent='まだ誰も入っていません';meta.textContent='';return}
   const floor=payFloor();
   let h='<table class="pay"><tr><th>氏名</th><th>区分</th><th>職位</th><th class="num">級</th><th class="num">号</th><th class="num">基本給／時給</th><th class="num">役職</th><th class="num">資格</th><th class="num">月額</th><th></th></tr>';
-  let prev='';
-  payData.people.forEach((p,i)=>{
+  const amt=p=>{const b=baseOf(p);if(b==null)return -1;return p.kind==='パート'?b:b+(num(p.post)||0)+(num(p.qual)||0)};
+  payData.people.map((p,i)=>({p,i,a:amt(p)})).sort((x,y)=>y.a-x.a||x.i-y.i).forEach(({p,i})=>{
     const part=p.kind==='パート',b=baseOf(p);
     const low=b!=null&&(part?b<payData.cfg.minWage:(p.kind==='社員'&&b<floor));
     const tot=(b!=null&&!part)?b+(num(p.post)||0)+(num(p.qual)||0):null;
-    h+=`<tr class="${prev&&prev!==p.kind?'sep':''}${low?' low':''}" onclick="payEdit(${i})"><td class="name">${esc(p.name)}</td><td class="sub">${esc(p.kind)}</td><td class="sub">${esc(p.pos)}</td><td class="num">${part?'':esc(p.grade)}</td><td class="num">${esc(p.step)}</td><td class="num">${b==null?'<span class="sub">—</span>':yen(b)}</td><td class="num">${yen(p.post)}</td><td class="num">${yen(p.qual)}</td><td class="num"><b>${tot==null?'':yen(tot)}</b></td><td class="sub">✎</td></tr>`;
-    prev=p.kind;
+    h+=`<tr class="${low?'low':''}" onclick="payEdit(${i})"><td class="name">${esc(p.name)}</td><td class="sub">${esc(p.kind)}</td><td class="sub">${esc(p.pos)}</td><td class="num">${part?'':esc(p.grade)}</td><td class="num">${esc(p.step)}</td><td class="num">${b==null?'<span class="sub">—</span>':yen(b)}</td><td class="num">${yen(p.post)}</td><td class="num">${yen(p.qual)}</td><td class="num"><b>${tot==null?'':yen(tot)}</b></td><td class="sub">✎</td></tr>`;
   });
   el.className='';el.innerHTML=h+'</table>';
   const lows=payData.people.filter(p=>{const b=baseOf(p);return b!=null&&(p.kind==='パート'?b<payData.cfg.minWage:(p.kind==='社員'&&b<floor))}).length;
