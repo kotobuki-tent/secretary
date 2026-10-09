@@ -5,8 +5,9 @@
      開くと業務管理API（GAS）から日報・休み・対象者・身元記録を取り、その場で集計する。ファイルを持っている人だけが見られる。 -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap');
 :root{--text:#222;--dim:#777;--faint:#999;--border:#e4e4e4;--surface:#fbfbfb;--surface2:#f0f0f0;--accent:#2b6;--green:#2b6;--orange:#e9a;--red:#c33}
-body{margin:0;overflow:hidden;background:#f6f7f8;color:var(--text);font:15px/1.45 -apple-system,'Hiragino Sans','Meiryo','Yu Gothic UI',sans-serif}
+body{margin:0;overflow:hidden;background:#f6f7f8;color:var(--text);font:15px/1.45 'Hiragino Sans','Noto Sans JP',sans-serif}
 .wrap{max-width:1700px;margin:0 auto;padding:10px 12px 0;box-sizing:border-box;height:100vh;display:flex;flex-direction:column}
 .cols{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;flex:1 1 auto;min-height:0}
 .cols>div{overflow-y:auto;min-height:0;padding:0 4px 24px 0;scrollbar-width:thin}
@@ -14,8 +15,8 @@ body{margin:0;overflow:hidden;background:#f6f7f8;color:var(--text);font:15px/1.4
 h1{display:none}.sub{color:var(--dim);font-size:14px}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin:0 0 8px}
 .card h2{font-size:15px;margin:0 0 6px}
-.stats-sub{font-size:14px}.stats-sub b{color:var(--accent)}
-.stats-note{font-size:11px;color:var(--dim);margin:2px 0 10px}
+.stats-sub{font-size:15px}.stats-sub b{color:var(--text)}
+.stats-note{font-size:13px;color:var(--dim);margin:2px 0 6px}
 .stats-list{display:flex;flex-direction:column;gap:6px}
 .stats-row{display:flex;align-items:center;gap:10px;padding:3px 6px;border-bottom:1px solid var(--border)}
 .stats-rank{width:22px;text-align:center;font-weight:700;color:var(--dim);flex:0 0 auto}
@@ -43,14 +44,14 @@ td.name{font-weight:600;font-size:13px}td.sub{color:var(--dim)}
 .btn.sm{padding:3px 9px;font-size:13px}.btn.gray{background:#fff}
 </style></head>
 <body><div class="wrap">
-<div class="top"><div><h1>寿テント 経営</h1><div class="sub" id="who">読み込み中…</div></div><button class="btn" onclick="load()">↻ 更新</button></div>
+<div class="top"><span class="sub" id="who"></span><button class="btn sm" onclick="load()">更新</button></div>
 <div class="cols"><div>
-<div class="card"><h2>日報の記入状況</h2><div id="stats" class="loading">読み込み中…</div></div>
+<div class="card"><h2>日報</h2><div id="stats" class="loading">読み込み中…</div></div>
 </div><div>
-<div class="card"><h2>人事考課</h2><a class="btn" id="hr" target="_blank" rel="noopener">人事考課を開く（経営）</a></div>
+<div class="card"><h2>人事考課</h2><a class="btn sm" id="hr" target="_blank" rel="noopener">開く</a></div>
 <div class="card"><h2>給料台帳</h2>
 <div id="pay" class="loading">読み込み中…</div>
-<div class="pay-foot"><span id="payMeta"></span><span class="pay-btns"><button class="btn sm" onclick="payEdit(-1)">＋ 人を足す</button><button class="btn sm gray" onclick="payCfg()">表の設定</button><label class="btn sm gray" style="cursor:pointer">読み込む<input type="file" id="payFile" accept=".xlsx,.json" style="display:none"></label><button class="btn sm gray" onclick="payExport()">書き出す</button></span></div></div>
+<div class="pay-foot"><span id="payMeta"></span><span class="pay-btns"><button class="btn sm" onclick="payEdit(-1)">追加</button><button class="btn sm" onclick="payCfg()">設定</button><label class="btn sm" style="cursor:pointer">読込<input type="file" id="payFile" accept=".xlsx,.json" style="display:none"></label><button class="btn sm" onclick="payExport()">書出</button></span></div></div>
 <div class="mo-bg" id="payMo"><div class="mo"><h3 id="payMoTitle">給料</h3>
 <div class="f2"><label>氏名<input id="pf_name"></label><label>区分<select id="pf_kind"><option>役員</option><option>執行役員</option><option>社員</option><option>パート</option></select></label></div>
 <div class="f2"><label>職位<input id="pf_pos"></label><label>級<input id="pf_grade" type="number" min="1" max="5" inputmode="numeric"></label></div>
@@ -79,7 +80,7 @@ function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'
 async function get(p){const r=await fetch(API+'?'+new URLSearchParams({...p,key:KEY,cid:'boss-local'}));return r.json()}
 function jst(v){const d=new Date(v);if(isNaN(d))return String(v||'');return String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
 async function load(){
-  document.getElementById('who').textContent='読み込み中…';
+  document.getElementById('who').textContent='';
   try{
     const todayS=ymd(new Date());
     const today=new Date();today.setHours(0,0,0,0);today.setDate(today.getDate()-1);/* 今日は分母に入れない（朝に開くと全員が未記入1日になるため、前日まで） */const biz=[];
@@ -97,19 +98,19 @@ async function load(){
     /* 今日の分は終業後（17:30 以降）だけ出す。勤務時間中は「未記入」ではない */
     const nw=new Date(),tw=nw.getDay(),afterWork=nw.getHours()*60+nw.getMinutes()>=17*60+30,days=((tw===0||tw===6||HOLIDAYS[todayS]||!afterWork)?[]:[todayS]).concat(biz.slice(0,5));
     const dlabel=s=>{const d=new Date(s+'T00:00:00');return (d.getMonth()+1)+'/'+d.getDate()+'（'+'日月火水木金土'[d.getDay()]+'）'};
-    let mh='<div class="stats-sub" style="font-weight:700">いま未記入の人</div><div class="stats-note">この画面を開いた時点。日報も休みの登録も無い人。今日の分は 17:30 を過ぎてから出ます。土日祝に出た人はここには出ません。</div><div class="miss-list">';
+    let mh='<div class="stats-sub" style="font-weight:700">未記入</div><div class="miss-list">';
     days.forEach(d=>{const names=(st.staff||[]).filter(s=>{const k=String(s.employee_no);return !(JOINED[k]&&d<JOINED[k])&&!(rpDay[d]&&rpDay[d].has(k))&&!(abDay[d]&&abDay[d].has(k))}).map(s=>esc(s.name));
-      mh+=`<div class="miss-row"><span class="miss-day">${d===todayS?'今日 ':''}${dlabel(d)}</span><span class="miss-names">${names.length?names.join('、')+`<span class="miss-n">（${names.length}人）</span>`:'<span class="miss-ok">全員記入済み</span>'}</span></div>`});
+      mh+=`<div class="miss-row"><span class="miss-day">${dlabel(d)}</span><span class="miss-names">${names.length?names.join('、')+`<span class="miss-n">（${names.length}人）</span>`:'<span class="miss-ok">全員記入済み</span>'}</span></div>`});
     mh+='</div><div style="height:14px"></div>';
     let rows=(st.staff||[]).map(s=>{const k=String(s.employee_no),j=JOINED[k]||'',absN=[...(absBy[k]||[])].filter(d=>d>=j).length,target=Math.max(0,biz.filter(d=>d>=j).length-absN),done=[...(byEmp[k]||[])].filter(d=>d>=j).length,miss=Math.max(0,target-done);return{name:s.name,done,miss,target,rate:target?Math.round(done/target*100):0}});
     const none=rows.filter(r=>!r.target);rows=rows.filter(r=>r.target);
     rows.sort((a,b)=>b.miss-a.miss||a.rate-b.rate||a.name.localeCompare(b.name,'ja'));
     const tD=rows.reduce((s,r)=>s+r.done,0),tP=rows.reduce((s,r)=>s+r.target,0),overall=tP?Math.round(tD/tP*100):0;
-    let h=`<div class="stats-sub">直近30日の営業日 <b>${N}日</b>（${from}〜${to}、土日祝を除く・前日まで）／ 全体記入率 <b>${overall}%</b></div><div class="stats-note">※出勤日ベース。欠勤日は除外して計算。日報が1件でもある日を「記入」とカウント。</div><div class="stats-list">`;
-    rows.forEach((r,i)=>{const col=r.rate>=80?'var(--green)':r.rate>=50?'var(--orange)':'var(--red)';h+=`<div class="stats-row"><span class="stats-rank">${i+1}</span><span class="stats-name">${esc(r.name)}</span><span class="stats-bar-wrap"><span class="stats-bar" style="width:${r.rate}%;background:${col}"></span></span><span class="stats-rate">${r.rate}%</span><span class="stats-miss">未記入 <b>${r.miss}</b>日</span></div>`});
-    if(none.length)h+=`<div class="stats-note" style="margin-top:8px">対象日なし（30日すべて休み）：${none.map(r=>esc(r.name)).join('、')}</div>`;
+    let h=`<div class="stats-sub" style="font-weight:700;margin-top:10px">30日の記入率 <b>${overall}%</b></div><div class="stats-list">`;
+    rows.forEach((r,i)=>{const col=r.rate>=80?'var(--green)':r.rate>=50?'var(--orange)':'var(--red)';h+=`<div class="stats-row"><span class="stats-rank">${i+1}</span><span class="stats-name">${esc(r.name)}</span><span class="stats-bar-wrap"><span class="stats-bar" style="width:${r.rate}%;background:${col}"></span></span><span class="stats-rate">${r.rate}%</span><span class="stats-miss"><b>${r.miss}</b>日</span></div>`});
+    if(none.length)h+=`<div class="stats-note" style="margin-top:8px">30日すべて休み：${none.map(r=>esc(r.name)).join('、')}</div>`;
     document.getElementById('stats').className='';document.getElementById('stats').innerHTML=mh+h+'</div>';
-    document.getElementById('who').textContent='更新 '+new Date().toLocaleString('ja-JP');
+    document.getElementById('who').textContent=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
   }catch(e){document.getElementById('who').innerHTML='<span class="err">取得に失敗：'+esc(e.message)+'</span>'}
 }
 // ---- 給料台帳（2026-10-09）。中身はブラウザで暗号にして GAS に預ける（dept=pw&vault=pay、鍵は PW管理 と同じ DK）。GAS もシートも平文を持たない ----
