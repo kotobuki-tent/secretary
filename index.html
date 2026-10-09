@@ -13,7 +13,13 @@
 body{margin:0;font-family:-apple-system,"Hiragino Sans","Meiryo","Yu Gothic UI",sans-serif;font-size:17px;color:#222;background:#f6f7f8}
 header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;z-index:2}
 header h1{font-size:19px;margin:0 8px 0 0}
-.gate{max-width:360px;margin:60px auto;text-align:center}.gate input{display:block;width:100%;box-sizing:border-box;font-size:20px;padding:10px 12px;border:1px solid #bbb;border-radius:6px;margin:10px 0;text-align:center}.gate button{font-size:17px;padding:8px 24px;border:1px solid #2b6;background:#2b6;color:#fff;border-radius:6px;cursor:pointer}.gate .ng{color:#c33;font-size:15px}
+header .tabs{display:flex;gap:4px;margin-right:6px}
+header .tabs button{border:1px solid #bbb;background:#fff;padding:4px 12px;border-radius:4px;cursor:pointer;font-weight:600}
+header .tabs button.on{background:#2b6;color:#fff;border-color:#2b6}
+header .tabs.off{display:none}
+.fr{width:100%;height:calc(100vh - 54px);border:0;display:block;background:#fff}
+.fr.off{display:none}
+body.t-boss main,body.t-pw main,body.t-boss header .sel,body.t-pw header .sel,body.t-boss header .st,body.t-pw header .st,body.t-boss header .sync,body.t-pw header .sync{display:none}
 header .sel button{border:1px solid #bbb;background:#fff;padding:4px 10px;border-radius:4px;cursor:pointer}
 header .sel button.on{background:#222;color:#fff;border-color:#222}
 header .st{color:#777;font-size:14px;margin-left:auto}
@@ -48,26 +54,35 @@ details summary{cursor:pointer;color:#666;font-size:15px}
 <body>
 <header>
   <h1>秘書</h1>
-  <a id="keiei" href="./keiei.html" style="display:none;border:1px solid #bbb;background:#fff;color:#222;padding:4px 12px;border-radius:4px;text-decoration:none;font-weight:600;margin-right:6px">経営</a>
+  <nav class="tabs" id="tabs"><button class="on" data-t="sec" onclick="showTab('sec')">秘書</button><button data-t="boss" onclick="showTab('boss')">経営</button><button data-t="pw" onclick="showTab('pw')">PW</button></nav>
   <span class="sel"><button data-d="1">今日</button><button data-d="3" class="on">3日</button><button data-d="7">1週間</button></span>
   <span class="st" id="st"></span>
   <button class="sync" onclick="syncNow()">今すぐ更新</button>
 </header>
 <main id="main"><p class="empty">読み込み中…</p></main>
+<iframe id="fr_boss" class="fr off" title="経営"></iframe>
+<iframe id="fr_pw" class="fr off" title="PW管理"></iframe>
 <div id="ov" onclick="if(event.target===this)this.classList.remove('on')"><div class="bx"><button class="x" onclick="document.getElementById('ov').classList.remove('on')">閉じる</button><div class="hd" id="ovh"></div><div class="bd" id="ovb"></div></div></div>
 <script>
-// 秘書：GAS プロジェクト「秘書」（kototen.office）を API として使う。合言葉は画面で一度入れる（?k= でも可）、以後は localStorage
+// 秘書：GAS プロジェクト「秘書」（kototen.office）を API として使う。キーは ?k=（初回のみ、以後は localStorage）
 var API='https://script.google.com/macros/s/AKfycbz1HO0bfr65_IhCisT4Q-zR6YZ-mQUEdRx7qfSqHLLoeVsVPCeaL48dn0b9w1xtfYUS/exec';
 var K=(new URLSearchParams(location.search).get('k')||'');
 try{ if(K) localStorage.setItem('sec_k',K); else K=localStorage.getItem('sec_k')||''; }catch(e){}
-try{ if(localStorage.getItem('sec_bk')) document.getElementById('keiei').style.display=''; }catch(e){}
-try{ var _q=new URLSearchParams(location.search); if(_q.get('k')){ _q.delete('k'); history.replaceState(null,'',location.pathname+(_q.toString()?'?'+_q.toString():'')); } }catch(e){}
-// 合言葉（10/9 iller「単独にしてくれ。合言葉つきで。遠藤未来にも見てもらう」）：無ければ入力欄、違えば入れ直し
-function gate(msg){
-  document.getElementById('main').innerHTML='<form class="gate" onsubmit="return enterKey()"><div>合言葉</div><input id="kw" autocomplete="off" autocapitalize="off">'+(msg?'<div class="ng">'+esc(msg)+'</div>':'')+'<button type="submit">開く</button></form>';
-  var i=document.getElementById('kw'); if(i) i.focus();
+// 経営・PW のタブ（10/9 iller「秘書に経営タブと PW タブも足して一つに」）。鍵は ?bk=（経営の鍵）?dk=（台帳の暗号の鍵）で一度だけ受け取り、
+// 端末の localStorage に置く。リポジトリには入れない。受け取ったら URL から消す（履歴・ブックマークに残さない）。
+try{ var _q=new URLSearchParams(location.search), _bk=_q.get('bk'), _dk=_q.get('dk');
+  if(_bk) localStorage.setItem('sec_bk',_bk); if(_dk) localStorage.setItem('sec_dk',_dk);
+  if(_bk||_dk||_q.get('k')){ _q.delete('bk'); _q.delete('dk'); _q.delete('k'); history.replaceState(null,'',location.pathname+(_q.toString()?'?'+_q.toString():'')); }
+}catch(e){}
+function showTab(t){
+  document.body.classList.remove('t-boss','t-pw'); if(t!=='sec') document.body.classList.add('t-'+t);
+  document.querySelectorAll('.tabs button').forEach(function(b){b.classList.toggle('on',b.dataset.t===t)});
+  ['boss','pw'].forEach(function(n){var f=document.getElementById('fr_'+n); f.classList.toggle('off',t!==n); if(t===n&&!f.src) f.src=n+'.html?v='+Date.now();});
+  try{localStorage.setItem('sec_tab',t)}catch(e){}
 }
-function enterKey(){ var v=(document.getElementById('kw').value||'').trim(); if(!v) return false; K=v; try{localStorage.setItem('sec_k',K)}catch(e){} load(); return false; }
+// 経営・PW のタブは経営の鍵がある端末（iller・社長）だけに出す。遠藤には秘書だけ（10/9）
+try{ if(!localStorage.getItem('sec_bk')) document.getElementById('tabs').classList.add('off'); }catch(e){}
+try{ var _t=localStorage.getItem('sec_tab'); if(_t&&_t!=='sec'&&localStorage.getItem('sec_bk')) showTab(_t); }catch(e){}
 var DAYS=3,D=null;
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function me(n){if(!n)return '';if(/^(なし|（なし）|無記名|担当者様?|ご担当者様?|各位)$/.test(n))return esc(n);return '<span class="me">'+esc(n)+'</span>'}
@@ -206,14 +221,14 @@ function loadWeather(){
   Promise.all([p1,p3]).then(function(){if(D&&D.items)render()})}
 function load(tries){
   tries=tries||0;
-  if(!K){gate();return}
+  if(!K){document.getElementById('main').innerHTML='<p class="empty">キーがありません（URL に ?k= を付けて開いてください）</p>';return}
   // GAS は放置後の1回目（コールドスタート）に JSON でなく HTML のエラーページを返したり、混んでいる時は返事が遅かったりする
   // → 5秒・10秒・20秒後に最大3回取り直す。すでに表示している時は画面を消さず、右上の状態だけ変える（10/9 iller「エラーで開けません的なのがときどき出る」）
   var st=document.getElementById('st');
   if(!D&&tries===0)document.getElementById('main').innerHTML='<p class="empty">読み込み中…</p>';
   fetch(API+'?k='+encodeURIComponent(K)+'&a=data&days='+DAYS).then(function(r){return r.text()}).then(function(t){
     var d;try{d=JSON.parse(t)}catch(e){throw new Error('not-json')}
-    if(d.error){ if(/キー|key/.test(d.error)){ K=''; try{localStorage.removeItem('sec_k')}catch(e){} gate('合言葉が違います'); return } document.getElementById('main').innerHTML='<p class="empty">'+esc(d.error)+'</p>';return}
+    if(d.error){document.getElementById('main').innerHTML='<p class="empty">'+esc(d.error)+'</p>';return}
     D=d;dedupeFax(D);render()}).catch(function(e){
     var msg=e.message==='not-json'?'サーバーが起動中':e.message;
     if(tries<3){var w=5000*Math.pow(2,tries);
