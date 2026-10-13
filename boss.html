@@ -53,7 +53,7 @@ td.name{font-weight:600;font-size:13px}td.sub{color:var(--dim)}
 <div id="pay" class="loading">読み込み中…</div>
 <div class="pay-foot"><span id="payMeta"></span><span class="pay-btns"><button class="btn sm" onclick="payEdit(-1)">追加</button><button class="btn sm" onclick="payCfg()">設定</button><label class="btn sm" style="cursor:pointer">読込<input type="file" id="payFile" accept=".xlsx,.json" style="display:none"></label><button class="btn sm" onclick="payExport()">書出</button></span></div></div>
 <div class="mo-bg" id="payMo"><div class="mo"><h3 id="payMoTitle">給料</h3>
-<div class="f2"><label>氏名<input id="pf_name"></label><label>区分<select id="pf_kind"><option>役員</option><option>執行役員</option><option>社員</option><option>パート</option></select></label></div>
+<div class="f2"><label>氏名<input id="pf_name"></label><label>区分<select id="pf_kind"><option>執行役員</option><option>社員</option><option>パート</option></select></label></div>
 <div class="f2"><label>職位<input id="pf_pos"></label><label>級<input id="pf_grade" type="number" min="1" max="5" inputmode="numeric"></label></div>
 <div class="f2"><label>号<input id="pf_step" type="number" min="1" max="51" inputmode="numeric"></label><label>固定額<input id="pf_fixed" type="number" inputmode="numeric"></label></div>
 <div class="f2"><label>役職手当<input id="pf_post" type="number" inputmode="numeric"></label><label>資格手当<input id="pf_qual" type="number" inputmode="numeric"></label></div>
@@ -142,7 +142,7 @@ function payRender(){
   const floor=payFloor();
   let h='<table class="pay"><tr><th>氏名</th><th>区分</th><th>職位</th><th class="num">級</th><th class="num">号</th><th class="num">基本給／時給</th><th class="num">役職</th><th class="num">資格</th><th class="num">月額</th><th></th></tr>';
   const amt=p=>{const b=baseOf(p);if(b==null)return -1;return p.kind==='パート'?b:b+(num(p.post)||0)+(num(p.qual)||0)};
-  payData.people.map((p,i)=>({p,i,a:amt(p)})).sort((x,y)=>y.a-x.a||x.i-y.i).forEach(({p,i})=>{
+  payData.people.map((p,i)=>({p,i,a:amt(p)})).filter(x=>x.p.kind!=='役員').sort((x,y)=>y.a-x.a||x.i-y.i).forEach(({p,i})=>{
     const part=p.kind==='パート',b=baseOf(p);
     const low=b!=null&&(part?b<payData.cfg.minWage:(p.kind==='社員'&&b<floor));
     const tot=(b!=null&&!part)?b+(num(p.post)||0)+(num(p.qual)||0):null;
@@ -150,7 +150,7 @@ function payRender(){
   });
   el.className='';el.innerHTML=h+'</table>';
   const lows=payData.people.filter(p=>{const b=baseOf(p);return b!=null&&(p.kind==='パート'?b<payData.cfg.minWage:(p.kind==='社員'&&b<floor))}).length;
-  meta.innerHTML=(payData.at?'保存 '+esc(payData.at)+'　':'')+payData.people.length+'人'+(lows?'　<span class="err">最低賃金割れ '+lows+'人</span>':'');
+  meta.innerHTML=(payData.at?'保存 '+esc(payData.at)+'　':'')+payData.people.filter(p=>p.kind!=='役員').length+'人'+(lows?'　<span class="err">最低賃金割れ '+lows+'人</span>':'');
 }
 async function payLoad(){
   const el=document.getElementById('pay');
@@ -243,7 +243,7 @@ document.getElementById('payFile').addEventListener('change',async ev=>{
 });
 function payExport(){
   const floor=payFloor(),amt=p=>{const b=baseOf(p);if(b==null)return -1;return p.kind==='パート'?b:b+(num(p.post)||0)+(num(p.qual)||0)};
-  const list=payData.people.map((p,i)=>({p,i,a:amt(p)})).sort((x,y)=>y.a-x.a||x.i-y.i).map(x=>x.p);
+  const list=payData.people.map((p,i)=>({p,i,a:amt(p)})).filter(x=>x.p.kind!=='役員').sort((x,y)=>y.a-x.a||x.i-y.i).map(x=>x.p);
   const aoa=[['氏名','区分','職位','級','号','基本給','役職手当','資格手当','月額','備考']];
   list.forEach(p=>{const part=p.kind==='パート',b=baseOf(p);aoa.push([p.name,p.kind,p.pos||'',part?'':(p.grade||''),p.step||'',b==null?'':b,num(p.post)||'',num(p.qual)||'',(b!=null&&!part)?b+(num(p.post)||0)+(num(p.qual)||0):'',p.note||''])});
   const ws=XLSX.utils.aoa_to_sheet(aoa),B='D1D5DB',bd={top:{style:'thin',color:{rgb:B}},bottom:{style:'thin',color:{rgb:B}},left:{style:'thin',color:{rgb:B}},right:{style:'thin',color:{rgb:B}}};
