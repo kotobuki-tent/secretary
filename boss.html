@@ -14,7 +14,7 @@ body{margin:0;overflow:hidden;background:#f6f7f8;color:var(--text);font:15px/1.4
 @media(max-width:1000px){body{overflow:auto}.wrap{height:auto;display:block;padding-bottom:60px}.cols{display:block}.cols>div{overflow:visible;padding:0}}
 h1{display:none}.sub{color:var(--dim);font-size:14px}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin:0 0 8px}
-.card h2{font-size:15px;margin:0 0 6px}
+.card h2{font-size:15px;margin:0 0 6px}.off{display:none}
 .stats-sub{font-size:15px}.stats-sub b{color:var(--text)}
 .stats-note{font-size:13px;color:var(--dim);margin:2px 0 6px}
 .stats-list{display:flex;flex-direction:column;gap:6px}
@@ -49,9 +49,10 @@ td.name{font-weight:600;font-size:13px}td.sub{color:var(--dim)}
 <div class="card"><h2>日報</h2><div id="stats" class="loading">読み込み中…</div></div>
 </div><div>
 <div class="card"><h2>人事考課</h2><a class="btn sm" id="hr" target="_blank" rel="noopener">開く</a></div>
-<div class="card"><h2>給料台帳</h2>
+<div class="card"><h2>給料台帳</h2><button class="btn sm" id="payToggle" onclick="payToggle()">開く</button>
+<div id="payBody" class="off" style="margin-top:8px">
 <div id="pay" class="loading">読み込み中…</div>
-<div class="pay-foot"><span id="payMeta"></span><span class="pay-btns"><button class="btn sm" onclick="payEdit(-1)">追加</button><button class="btn sm" onclick="payCfg()">設定</button><label class="btn sm" style="cursor:pointer">読込<input type="file" id="payFile" accept=".xlsx,.json" style="display:none"></label><button class="btn sm" onclick="payExport()">書出</button></span></div></div>
+<div class="pay-foot"><span id="payMeta"></span><span class="pay-btns"><button class="btn sm" onclick="payEdit(-1)">追加</button><button class="btn sm" onclick="payCfg()">設定</button><label class="btn sm" style="cursor:pointer">読込<input type="file" id="payFile" accept=".xlsx,.json" style="display:none"></label><button class="btn sm" onclick="payExport()">書出</button></span></div></div></div>
 <div class="mo-bg" id="payMo"><div class="mo"><h3 id="payMoTitle">給料</h3>
 <div class="f2"><label>氏名<input id="pf_name"></label><label>区分<select id="pf_kind"><option>執行役員</option><option>社員</option><option>パート</option></select></label></div>
 <div class="f2"><label>職位<input id="pf_pos"></label><label>級<input id="pf_grade" type="number" min="1" max="5" inputmode="numeric"></label></div>
@@ -256,5 +257,7 @@ function payExport(){
   XLSX.writeFile(wb,'給料台帳_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$p('payMo').classList.contains('show'))payMoClose()});
-if(KEY){load();payLoad()}
+let payOpened=false;
+function payToggle(){const b=document.getElementById('payBody'),t=document.getElementById('payToggle');const open=b.classList.toggle('off');t.textContent=open?'開く':'閉じる';if(!open&&!payOpened){payOpened=true;payLoad()}}   // 給料はデフォで閉じる・開いた時に読む（2026-10-14 iller）
+if(KEY){load()}
 </script></body></html>
