@@ -84,32 +84,41 @@ async function load(){
   document.getElementById('who').textContent='';
   try{
     const todayS=ymd(new Date());
-    const today=new Date();today.setHours(0,0,0,0);today.setDate(today.getDate()-1);/* 今日は分母に入れない（朝に開くと全員が未記入1日になるため、前日まで） */const biz=[];
-    for(let i=0;i<30;i++){const d=new Date(today);d.setDate(d.getDate()-i);const w=d.getDay(),s=ymd(d);if(w===0||w===6||HOLIDAYS[s])continue;biz.push(s)}
-    const bizSet=new Set(biz),from=biz[biz.length-1],to=biz[0],N=biz.length;
-    const [st,rp,ab]=await Promise.all([get({dept:'daily',action:'staff_for_daily'}),get({dept:'daily',action:'read',date_from:from,date_to:todayS}),get({dept:'daily',action:'read_absence',date_from:from,date_to:todayS})]);
+    /* 2026-10-19：出勤した日で数える。iMac の nippo_notify.py が KOT の出勤打刻を業務管理（punch_days）に毎朝・毎夕書くので、
+       その記録がある日はそれに従う（土日の現場も、平日の休みも正しくなる）。記録がまだ無い日は今までどおり平日なら出勤扱い。
+       今日は分母に入れない（朝に開くと全員が未記入1日になるため、前日まで） */
+    const y=new Date();y.setHours(0,0,0,0);y.setDate(y.getDate()-1);const win=[];
+    for(let i=0;i<30;i++){const d=new Date(y);d.setDate(d.getDate()-i);win.push(ymd(d))}
+    const from=win[win.length-1],N=win.length;
+    const [st,rp,ab,pu]=await Promise.all([get({dept:'daily',action:'staff_for_daily'}),get({dept:'daily',action:'read',date_from:from,date_to:todayS}),get({dept:'daily',action:'read_absence',date_from:from,date_to:todayS}),get({dept:'daily',action:'read_punch',date_from:from,date_to:todayS})]);
     if(st.error==='auth'){throw new Error('合言葉が通りません（API_KEY が変わった可能性）')}
-    const byEmp={},absBy={};
-    (rp.data||[]).forEach(r=>{const e=String(r.employee_no||''),dt=String(r.date||'').slice(0,10);if(!e||!bizSet.has(dt))return;(byEmp[e]=byEmp[e]||new Set()).add(dt)});
-    (ab.data||[]).forEach(a=>{const e=String(a.employee_no||''),dt=String(a.date||'').slice(0,10);if(!e||!bizSet.has(dt))return;(absBy[e]=absBy[e]||new Set()).add(dt)});
-    /* いま未記入の人（日付ごと）。今日（平日なら）＋直近の営業日5日。日報も休みの登録も無い人を並べる */
+    const norm=k=>/^\d+$/.test(String(k))?String(parseInt(k,10)):String(k);
+    const punch={};Object.entries(pu.data||{}).forEach(([d,arr])=>{punch[d]=new Set((arr||[]).map(norm))});
+    const isWeekday=s=>{const d=new Date(s+'T00:00:00');const w=d.getDay();return !(w===0||w===6||HOLIDAYS[s])};
+    const anyone=s=>punch[s]!==undefined?punch[s].size>0:isWeekday(s);          /* その日、誰か出勤したか */
+    const worked=(k,s)=>punch[s]!==undefined?punch[s].has(k):isWeekday(s);      /* その日、その人が出勤したか */
+    const byEmp={},absBy={},winSet=new Set(win);
+    (rp.data||[]).forEach(r=>{const e=norm(r.employee_no||''),dt=String(r.date||'').slice(0,10);if(!e||!winSet.has(dt))return;(byEmp[e]=byEmp[e]||new Set()).add(dt)});
+    (ab.data||[]).forEach(a=>{const e=norm(a.employee_no||''),dt=String(a.date||'').slice(0,10);if(!e||!winSet.has(dt))return;(absBy[e]=absBy[e]||new Set()).add(dt)});
+    /* いま未記入の人（日付ごと）。今日（終業後で誰か出勤していれば）＋直近の出勤日5日。出勤したのに日報も休みの登録も無い人を並べる */
     const rpDay={},abDay={};
-    (rp.data||[]).forEach(r=>{const e=String(r.employee_no||''),dt=String(r.date||'').slice(0,10);if(e)(rpDay[dt]=rpDay[dt]||new Set()).add(e)});
-    (ab.data||[]).forEach(a=>{const e=String(a.employee_no||''),dt=String(a.date||'').slice(0,10);if(e)(abDay[dt]=abDay[dt]||new Set()).add(e)});
+    (rp.data||[]).forEach(r=>{const e=norm(r.employee_no||''),dt=String(r.date||'').slice(0,10);if(e)(rpDay[dt]=rpDay[dt]||new Set()).add(e)});
+    (ab.data||[]).forEach(a=>{const e=norm(a.employee_no||''),dt=String(a.date||'').slice(0,10);if(e)(abDay[dt]=abDay[dt]||new Set()).add(e)});
     /* 今日の分は終業後（17:30 以降）だけ出す。勤務時間中は「未記入」ではない */
-    const nw=new Date(),tw=nw.getDay(),afterWork=nw.getHours()*60+nw.getMinutes()>=17*60+30,days=((tw===0||tw===6||HOLIDAYS[todayS]||!afterWork)?[]:[todayS]).concat(biz.slice(0,5));
+    const nw=new Date(),afterWork=nw.getHours()*60+nw.getMinutes()>=17*60+30,days=((afterWork&&anyone(todayS))?[todayS]:[]).concat(win.filter(anyone).slice(0,5));
     const dlabel=s=>{const d=new Date(s+'T00:00:00');return (d.getMonth()+1)+'/'+d.getDate()+'（'+'日月火水木金土'[d.getDay()]+'）'};
     let mh='<div class="stats-sub" style="font-weight:700">未記入</div><div class="miss-list">';
-    days.forEach(d=>{const names=(st.staff||[]).filter(s=>{const k=String(s.employee_no);return !(JOINED[k]&&d<JOINED[k])&&!(rpDay[d]&&rpDay[d].has(k))&&!(abDay[d]&&abDay[d].has(k))}).map(s=>esc(s.name));
-      mh+=`<div class="miss-row"><span class="miss-day">${dlabel(d)}</span><span class="miss-names">${names.length?names.join('、')+`<span class="miss-n">（${names.length}人）</span>`:'<span class="miss-ok">全員記入済み</span>'}</span></div>`});
+    days.forEach(d=>{const names=(st.staff||[]).filter(s=>{const k=norm(s.employee_no);return !(JOINED[k]&&d<JOINED[k])&&worked(k,d)&&!(rpDay[d]&&rpDay[d].has(k))&&!(abDay[d]&&abDay[d].has(k))}).map(s=>esc(s.name));
+      const wk=isWeekday(d)?'':'<span class="miss-n">（休日出勤）</span>';
+      mh+=`<div class="miss-row"><span class="miss-day">${dlabel(d)}</span><span class="miss-names">${names.length?names.join('、')+`<span class="miss-n">（${names.length}人）</span>`:'<span class="miss-ok">全員記入済み</span>'}${wk}</span></div>`});
     mh+='</div><div style="height:14px"></div>';
-    let rows=(st.staff||[]).map(s=>{const k=String(s.employee_no),j=JOINED[k]||'',absN=[...(absBy[k]||[])].filter(d=>d>=j).length,target=Math.max(0,biz.filter(d=>d>=j).length-absN),done=[...(byEmp[k]||[])].filter(d=>d>=j).length,miss=Math.max(0,target-done);return{name:s.name,done,miss,target,rate:target?Math.round(done/target*100):0}});
+    let rows=(st.staff||[]).map(s=>{const k=norm(s.employee_no),j=JOINED[k]||JOINED[String(s.employee_no)]||'';const wd=win.filter(d=>d>=j&&worked(k,d)&&!(absBy[k]&&absBy[k].has(d)));const target=wd.length,done=wd.filter(d=>byEmp[k]&&byEmp[k].has(d)).length,miss=Math.max(0,target-done);return{name:s.name,done,miss,target,rate:target?Math.round(done/target*100):0}});
     const none=rows.filter(r=>!r.target);rows=rows.filter(r=>r.target);
     rows.sort((a,b)=>b.miss-a.miss||a.rate-b.rate||a.name.localeCompare(b.name,'ja'));
     const tD=rows.reduce((s,r)=>s+r.done,0),tP=rows.reduce((s,r)=>s+r.target,0),overall=tP?Math.round(tD/tP*100):0;
     let h=`<div class="stats-sub" style="font-weight:700;margin-top:10px">30日の記入率 <b>${overall}%</b></div><div class="stats-list">`;
     rows.forEach((r,i)=>{const col=r.rate>=80?'var(--green)':r.rate>=50?'var(--orange)':'var(--red)';h+=`<div class="stats-row"><span class="stats-rank">${i+1}</span><span class="stats-name">${esc(r.name)}</span><span class="stats-bar-wrap"><span class="stats-bar" style="width:${r.rate}%;background:${col}"></span></span><span class="stats-rate">${r.rate}%</span><span class="stats-miss"><b>${r.miss}</b>日</span></div>`});
-    if(none.length)h+=`<div class="stats-note" style="margin-top:8px">30日すべて休み：${none.map(r=>esc(r.name)).join('、')}</div>`;
+    if(none.length)h+=`<div class="stats-note" style="margin-top:8px">30日のうち出勤なし：${none.map(r=>esc(r.name)).join('、')}</div>`;
     document.getElementById('stats').className='';document.getElementById('stats').innerHTML=mh+h+'</div>';
     document.getElementById('who').textContent=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
   }catch(e){document.getElementById('who').innerHTML='<span class="err">取得に失敗：'+esc(e.message)+'</span>'}
