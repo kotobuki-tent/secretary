@@ -10,7 +10,7 @@
 :root{--bg:#f2f2f7;--surface:#fff;--text:#1c1c1e;--dim:#6e6e73;--border:#d9d9de;--accent:#2f6fed}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
-#app{display:flex;flex-direction:column;height:100%}
+#app{display:flex;flex-direction:column;height:100%;height:100dvh}
 header{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap}
 header h1{font-size:16px;margin:0;font-weight:700}
 header .sub{color:var(--dim);font-size:12px}
@@ -28,7 +28,22 @@ header select{border:1px solid var(--border);border-radius:8px;padding:5px 8px;f
 .leaflet-container{font:inherit}
 .lbl{background:rgba(255,255,255,.9);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:11px;font-weight:700;white-space:nowrap}
 .now{background:#fff;border:2px solid #000;border-radius:50%;width:12px;height:12px;margin:-6px 0 0 -6px}
-@media(max-width:600px){header{padding:8px 12px}.bar{padding:8px 12px}.time b{min-width:96px;font-size:13px}}
+@media(max-width:600px){
+  header{padding:6px 12px;gap:8px;flex-wrap:nowrap;overflow:hidden}
+  header h1{font-size:15px;white-space:nowrap}
+  header .sub{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #upd{display:none}
+  .bar{padding:6px 10px calc(8px + env(safe-area-inset-bottom))}
+  .time{gap:8px}.time b{min-width:84px;font-size:13px}
+  .time input[type=range]{height:28px}
+  .chips{gap:4px;margin-top:6px}
+  .chip{font-size:11px;padding:2px 8px;gap:4px}.chip small{font-size:10px}
+  .lbl{font-size:10px;padding:0 4px}
+  .leaflet-control-zoom{display:none}
+}
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:#cfd3da}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--accent);margin-top:-10px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 </style>
 </head>
 <body>
@@ -85,7 +100,7 @@ function build(){
     const g=L.layerGroup(); const ll=S.pts.map(p=>[p.lat,p.lon]);
     g.addLayer(L.polyline(ll,{color:s.color,weight:s.width,opacity:S.stale?.45:.9,dashArray:s.dash||null}));
     S.pts.forEach((p,i)=>{ if(s.key==='jma'&&p.r) g.addLayer(L.circle([p.lat,p.lon],{radius:p.r*1000,color:s.color,weight:1,opacity:.6,fillOpacity:.06,dashArray:'4 4'}));
-      if(i===S.pts.length-1) g.addLayer(L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<span class="lbl" style="color:${s.color}">${esc(s.label)}</span>`,iconAnchor:[-6,8]}),interactive:false}));
+      if(i===S.pts.length-1&&(s.key==='jma'||s.key==='jtwc'||window.innerWidth>600)) g.addLayer(L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<span class="lbl" style="color:${s.color}">${esc(s.label)}</span>`,iconAnchor:[-6,8]}),interactive:false}));
       if(s.key==='jma'||s.key==='jtwc') g.addLayer(L.circleMarker([p.lat,p.lon],{radius:3.5,color:s.color,fillColor:'#fff',fillOpacity:1,weight:2}).bindTooltip(`${esc(s.label)} ${fmtJ(p.t)}${p.pres?' '+p.pres+'hPa':''}${p.wind?' '+p.wind+'m/s':''}${p.kt&&!p.wind?' '+p.kt+'kt':''}`)); });
     layers[s.key]=g; if(on[s.key]) g.addTo(map);
     const chip=document.createElement('span'); chip.className='chip'+(on[s.key]?'':' off'); chip.innerHTML=`<i style="background:${s.color}${s.dash?';border-top:2px dashed '+s.color+';height:0;background:none':''}"></i>${esc(s.label)} <small>${esc(fmtJ(S.init))}${S.stale?'・古い':''}</small>`;
@@ -97,7 +112,7 @@ function build(){
   const J=series('jma'); const t0=J?J.pts[0].t:tmin; times=[]; for(let t=new Date(t0);t<=tmax;t=new Date(t.getTime()+3*3600e3)) times.push(new Date(t));
   const sl=document.getElementById('slider'); sl.max=Math.max(0,times.length-1); sl.value=0; draw();
   const all=[]; Object.entries(layers).forEach(([k,g])=>{ if(k==='__past')return; g.eachLayer(l=>{ if(l.getLatLngs) all.push(...l.getLatLngs().flat()); }); });
-  if(all.length) map.fitBounds(L.latLngBounds(all).pad(.15));
+  if(all.length) map.fitBounds(L.latLngBounds(all).pad(window.innerWidth>600?.15:.05));
 }
 function draw(){
   const t=times[+document.getElementById('slider').value]; if(!t) return;
