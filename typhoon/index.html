@@ -136,6 +136,7 @@ function build(){
   const base=core.length?core:all;
   if(base.length){
     const b=L.latLngBounds(base); map.fitBounds(b.pad(.1),{animate:false});   // animate だと直後の getBounds が古い（倍率 5 のまま）
+    if(window.innerWidth>600) map.zoomOut(0.5,{animate:false});   // 横長は半段引いて周りを少し見せる
     const mb=map.getBounds(), west=b.getWest()-2;
     if(mb.getWest()<west){ const half=(mb.getEast()-mb.getWest())/2; map.panTo([map.getCenter().lat, west+half],{animate:false}); }
   }
@@ -159,7 +160,7 @@ async function load(){
   const pk=document.getElementById('pick'); pk.innerHTML=data.storms.map((s,i)=>`<option value="${i}">台風${+s.jma.number%100}号 ${esc(s.jma.name||'')}</option>`).join(''); pk.style.display=data.storms.length>1?'':'none'; pk.onchange=()=>pickStorm(+pk.value);
   pickStorm(0);
 }
-map=L.map('map',{zoomControl:true,attributionControl:true,zoomSnap:0.25}).setView([25,130],5);   // zoomSnap：整数の倍率だと初期表示が広がりすぎる
+map=L.map('map',{zoomControl:true,attributionControl:true,zoomSnap:0.25,zoomDelta:0.5}).setView([25,130],5);   // 倍率は 0.25 刻み、＋－は 0.5 ずつ（10/22 iller「中間の縮尺があれば」）
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:12}).addTo(map);
 document.getElementById('slider').addEventListener('input',draw);
 load().catch(e=>{ document.getElementById('ttl').textContent='読み込めません'; });
