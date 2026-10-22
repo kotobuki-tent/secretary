@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>台風の進路予想（気象庁・JTWC・各国モデル）</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{--bg:#f2f2f7;--surface:#fff;--text:#1c1c1e;--dim:#6e6e73;--border:#d9d9de;--accent:#2f6fed}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+#app{display:flex;flex-direction:column;height:100%}
+header{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap}
+header h1{font-size:16px;margin:0;font-weight:700}
+header .sub{color:var(--dim);font-size:12px}
+header select{border:1px solid var(--border);border-radius:8px;padding:5px 8px;font:inherit;background:#fff}
+#map{flex:1;min-height:320px}
+.bar{background:var(--surface);border-top:1px solid var(--border);padding:8px 16px 10px}
+.time{display:flex;align-items:center;gap:12px}
+.time b{min-width:120px;font-variant-numeric:tabular-nums}
+.time input[type=range]{flex:1}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;background:#fff;user-select:none}
+.chip i{width:14px;height:3px;border-radius:2px;display:inline-block}
+.chip.off{opacity:.35}
+.chip small{color:var(--dim)}
+.leaflet-container{font:inherit}
+.lbl{background:rgba(255,255,255,.9);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:11px;font-weight:700;white-space:nowrap}
+.now{background:#fff;border:2px solid #000;border-radius:50%;width:12px;height:12px;margin:-6px 0 0 -6px}
+@media(max-width:600px){header{padding:8px 12px}.bar{padding:8px 12px}.time b{min-width:96px;font-size:13px}}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <h1 id="ttl">台風</h1>
+  <span class="sub" id="iss"></span>
+  <select id="pick" style="display:none"></select>
+  <span class="sub" style="margin-left:auto" id="upd"></span>
+</header>
+<div id="map"></div>
+<div class="bar">
+  <div class="time"><b id="tlabel">—</b><input type="range" id="slider" min="0" max="0" value="0" step="1"></div>
+  <div class="chips" id="chips"></div>
+</div>
+</div>
+<script>
+const SRC=[
+  {key:'jma',  label:'気象庁',   color:'#1a4fd6', width:4},
+  {key:'jtwc', label:'米軍 JTWC', color:'#f28c1a', width:3},
+  {key:'UKM',  label:'UKMET',   color:'#19a7a0', width:2.5},
+  {key:'CMC',  label:'CMC',     color:'#8e44ad', width:2.5},
+  {key:'NGX',  label:'NAVGEM',  color:'#c0392b', width:2.5},
+  {key:'AVNO', label:'GFS',     color:'#2e7d32', width:2.5},
+  {key:'GFSO', label:'GFS',     color:'#2e7d32', width:2.5},
+  {key:'EMXI', label:'ECMWF',   color:'#000',    width:2.5},
+  {key:'AEMN', label:'GEFS 平均', color:'#2e7d32', width:2, dash:'6 6'},
+  {key:'CEMN', label:'CMC 平均',  color:'#8e44ad', width:2, dash:'6 6'},
+  {key:'NEMN', label:'NAVGEM 平均', color:'#c0392b', width:2, dash:'6 6'},
+  {key:'TVCN', label:'総合',     color:'#111',    width:3, dash:'2 6'},
+  {key:'CONW', label:'総合',     color:'#111',    width:3, dash:'2 6'},
+];
+const STALE_H=36;   // これより古い初期時刻のモデルは薄く
+let data=null, storm=null, map, layers={}, markers={}, times=[], on={};
+const pad=n=>String(n).padStart(2,'0');
+const fmtJ=d=>`${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}時`;
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function utc(s){ return new Date(s); }
+function series(key){   // → {init:Date, pts:[{t:Date,lat,lon,r,kt}], stale}
+  if(key==='jma'){ const p=storm.jma.points; if(!p.length) return null; return {init:new Date(p[0].valid), pts:p.map(x=>({t:new Date(x.valid),lat:x.lat,lon:x.lon,r:x.r,pres:x.pres,wind:x.wind,h:x.h})), label:'気象庁 '+fmtJ(new Date(storm.jma.issue))+' 発表'}; }
+  if(key==='jtwc'){ const w=storm.jtwc; if(!w) return null; const i=utc(w.init_utc); return {init:i, pts:w.points.map(x=>({t:new Date(i.getTime()+x.h*3600e3),lat:x.lat,lon:x.lon,kt:x.kt,h:x.h})), label:'JTWC '+fmtJ(i)+' 初期'}; }
+  const m=storm.models[key]; if(!m) return null; const i=utc(m.init_utc);
+  return {init:i, pts:m.points.map(x=>({t:new Date(i.getTime()+x.h*3600e3),lat:x.lat,lon:x.lon,kt:x.kt,h:x.h})), label:m.label+' '+fmtJ(i)+' 初期', stale:(Date.now()-i.getTime())>STALE_H*3600e3};
+}
+function interp(pts,t){ if(!pts.length) return null; if(t<=pts[0].t) return t>=pts[0].t-1 ? pts[0] : null; for(let i=1;i<pts.length;i++){ if(t<=pts[i].t){ const a=pts[i-1],b=pts[i],f=(t-a.t)/(b.t-a.t); return {lat:a.lat+(b.lat-a.lat)*f, lon:a.lon+(b.lon-a.lon)*f}; } } return null; }
+function build(){
+  Object.values(layers).forEach(l=>map.removeLayer(l)); layers={}; Object.values(markers).forEach(l=>map.removeLayer(l)); markers={};
+  const chips=document.getElementById('chips'); chips.innerHTML='';
+  // 過去の経路
+  if(storm.jma.past&&storm.jma.past.length){ const g=L.layerGroup([L.polyline(storm.jma.past,{color:'#555',weight:2,opacity:.6})]); g.addTo(map); layers.__past=g; }
+  let tmin=null,tmax=null; const seen=new Set();
+  for(const s of SRC){ if(seen.has(s.label)&&s.key!=='jma') continue; const S=series(s.key); if(!S) continue; seen.add(s.label);
+    if(on[s.key]===undefined) on[s.key]=!S.stale;
+    const g=L.layerGroup(); const ll=S.pts.map(p=>[p.lat,p.lon]);
+    g.addLayer(L.polyline(ll,{color:s.color,weight:s.width,opacity:S.stale?.45:.9,dashArray:s.dash||null}));
+    S.pts.forEach((p,i)=>{ if(s.key==='jma'&&p.r) g.addLayer(L.circle([p.lat,p.lon],{radius:p.r*1000,color:s.color,weight:1,opacity:.6,fillOpacity:.06,dashArray:'4 4'}));
+      if(i===S.pts.length-1) g.addLayer(L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<span class="lbl" style="color:${s.color}">${esc(s.label)}</span>`,iconAnchor:[-6,8]}),interactive:false}));
+      if(s.key==='jma'||s.key==='jtwc') g.addLayer(L.circleMarker([p.lat,p.lon],{radius:3.5,color:s.color,fillColor:'#fff',fillOpacity:1,weight:2}).bindTooltip(`${esc(s.label)} ${fmtJ(p.t)}${p.pres?' '+p.pres+'hPa':''}${p.wind?' '+p.wind+'m/s':''}${p.kt&&!p.wind?' '+p.kt+'kt':''}`)); });
+    layers[s.key]=g; if(on[s.key]) g.addTo(map);
+    const chip=document.createElement('span'); chip.className='chip'+(on[s.key]?'':' off'); chip.innerHTML=`<i style="background:${s.color}${s.dash?';border-top:2px dashed '+s.color+';height:0;background:none':''}"></i>${esc(s.label)} <small>${esc(fmtJ(S.init))}${S.stale?'・古い':''}</small>`;
+    chip.onclick=()=>{ on[s.key]=!on[s.key]; chip.classList.toggle('off',!on[s.key]); if(on[s.key]) layers[s.key].addTo(map); else map.removeLayer(layers[s.key]); draw(); };
+    chips.appendChild(chip);
+    const a=S.pts[0].t,b=S.pts[S.pts.length-1].t; if(!tmin||a<tmin)tmin=a; if(!tmax||b>tmax)tmax=b;
+  }
+  // 時刻の目盛り：気象庁の実況から 3 時間刻み
+  const J=series('jma'); const t0=J?J.pts[0].t:tmin; times=[]; for(let t=new Date(t0);t<=tmax;t=new Date(t.getTime()+3*3600e3)) times.push(new Date(t));
+  const sl=document.getElementById('slider'); sl.max=Math.max(0,times.length-1); sl.value=0; draw();
+  const all=[]; Object.entries(layers).forEach(([k,g])=>{ if(k==='__past')return; g.eachLayer(l=>{ if(l.getLatLngs) all.push(...l.getLatLngs().flat()); }); });
+  if(all.length) map.fitBounds(L.latLngBounds(all).pad(.15));
+}
+function draw(){
+  const t=times[+document.getElementById('slider').value]; if(!t) return;
+  document.getElementById('tlabel').textContent=fmtJ(t);
+  Object.values(markers).forEach(l=>map.removeLayer(l)); markers={};
+  for(const s of SRC){ if(!on[s.key]||!layers[s.key]) continue; const S=series(s.key); if(!S) continue; const p=interp(S.pts,t); if(!p) continue;
+    const m=L.circleMarker([p.lat,p.lon],{radius:7,color:'#000',weight:1.5,fillColor:s.color,fillOpacity:1}); m.addTo(map); markers[s.key]=m; }
+}
+function pickStorm(i){ storm=data.storms[i]; document.getElementById('ttl').textContent=`台風${+storm.jma.number%100}号 ${storm.jma.name||''}`; document.getElementById('iss').textContent='気象庁 '+fmtJ(new Date(storm.jma.issue))+' 発表'; on={}; build(); }
+async function load(){
+  const r=await fetch('data.json?nocache='+Date.now()); data=await r.json();
+  document.getElementById('upd').textContent='取得 '+data.updated;
+  if(!data.storms.length){ document.getElementById('ttl').textContent='台風なし'; return; }
+  const pk=document.getElementById('pick'); pk.innerHTML=data.storms.map((s,i)=>`<option value="${i}">台風${+s.jma.number%100}号 ${esc(s.jma.name||'')}</option>`).join(''); pk.style.display=data.storms.length>1?'':'none'; pk.onchange=()=>pickStorm(+pk.value);
+  pickStorm(0);
+}
+map=L.map('map',{zoomControl:true,attributionControl:true}).setView([25,130],5);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:12}).addTo(map);
+document.getElementById('slider').addEventListener('input',draw);
+load().catch(e=>{ document.getElementById('ttl').textContent='読み込めません'; });
+setInterval(load, 30*60*1000);
+</script>
+</body>
+</html>
