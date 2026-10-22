@@ -17,18 +17,18 @@ header .sub{color:var(--dim);font-size:12px}
 header select{border:1px solid var(--border);border-radius:8px;padding:5px 8px;font:inherit;background:#fff}
 #map{flex:1;min-height:320px}
 /* 操作は地図の上に浮かぶ札（10/22 iller「下のスライダーやらチップがタスクバーみたいすぎて気づかない」）*/
-.bar{position:absolute;right:16px;bottom:38px;z-index:1000;max-width:640px;background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:16px;box-shadow:0 10px 32px rgba(0,0,0,.28);padding:12px 18px 14px}
+.bar{position:absolute;right:16px;bottom:38px;z-index:1000;max-width:820px;background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:18px;box-shadow:0 10px 32px rgba(0,0,0,.28);padding:18px 24px 20px}
 .time{display:flex;align-items:center;gap:12px}
-.time b{min-width:120px;font-size:17px;font-variant-numeric:tabular-nums}
+.time b{min-width:130px;font-size:19px;font-variant-numeric:tabular-nums}
 .time .sl{flex:1;position:relative;padding-bottom:26px}
 .time .sl input[type=range]{display:block;width:100%;margin:0}
 /* 目盛：日付の変わり目に日付、12 時に小さな印（10/22 iller「目安の目盛」） */
 .ticks{position:absolute;left:14px;right:14px;top:28px;height:18px}
-.tick{position:absolute;top:0;transform:translateX(-50%);font-size:10px;line-height:1;color:var(--dim);white-space:nowrap;text-align:center}
+.tick{position:absolute;top:0;transform:translateX(-50%);font-size:11px;line-height:1;color:var(--dim);white-space:nowrap;text-align:center}
 .tick::before{content:'';display:block;width:1px;height:5px;background:#9a9aa0;margin:0 auto 3px}
 .tick.minor::before{height:3px;background:#c4c4c9}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.chip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);border-radius:999px;padding:4px 11px;font-size:12px;font-weight:600;cursor:pointer;background:#f2f2f7;user-select:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--border);border-radius:999px;padding:6px 13px;font-size:13px;font-weight:600;cursor:pointer;background:#f2f2f7;user-select:none}
 .chip i{width:14px;height:3px;border-radius:2px;display:inline-block}
 .chip.off{opacity:.45;background:#fff;font-weight:400;border-style:dashed}
 .chip small{color:var(--dim)}
@@ -42,7 +42,7 @@ header select{border:1px solid var(--border);border-radius:8px;padding:5px 8px;f
   #upd{display:none}
   .bar{position:static;max-width:none;background:var(--surface);border:none;border-top:1px solid var(--border);border-radius:0;box-shadow:none;padding:6px 10px calc(8px + env(safe-area-inset-bottom))}   /* スマホは下の帯のまま（iller「スマホはいいと思うが」） */
   .time b{font-size:13px}
-  .chip{background:#fff;font-weight:400;border-width:1px}.chip.off{border-style:solid;opacity:.35}
+  .chips{gap:4px;margin-top:6px}.chip{background:#fff;font-weight:400;border-width:1px;padding:2px 8px;font-size:11px;gap:4px}.chip.off{border-style:solid;opacity:.35}.tick{font-size:10px}
   .time{gap:8px}.time b{min-width:84px;font-size:13px}
   .time input[type=range]{height:28px}
   .chips{gap:4px;margin-top:6px}
