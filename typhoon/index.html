@@ -84,11 +84,17 @@ const fmtJ=d=>`${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}時`;
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function utc(s){ return new Date(s); }
 function series(key){   // → {init:Date, pts:[{t:Date,lat,lon,r,kt}], stale}
-  if(key==='jma'){ const p=storm.jma.points; if(!p.length) return null; return {init:new Date(p[0].valid), pts:p.map(x=>({t:new Date(x.valid),lat:x.lat,lon:x.lon,r:x.r,pres:x.pres,wind:x.wind,h:x.h})), label:'気象庁 '+fmtJ(new Date(storm.jma.issue))+' 発表'}; }
-  if(key==='jtwc'){ const w=storm.jtwc; if(!w) return null; const i=utc(w.init_utc); return {init:i, pts:w.points.map(x=>({t:new Date(i.getTime()+x.h*3600e3),lat:x.lat,lon:x.lon,kt:x.kt,h:x.h})), label:'JTWC '+fmtJ(i)+' 初期'}; }
+  if(key==='jma'){ const p=storm.jma.points; if(!p.length) return null; return {init:new Date(p[0].valid), pts:p.map(x=>({t:new Date(x.valid),lat:x.lat,lon:x.lon,r:x.r,pres:x.pres,wind:x.wind,h:x.h,gale:x.gale||[],storm:x.storm||[]})), label:'気象庁 '+fmtJ(new Date(storm.jma.issue))+' 発表'}; }
+  if(key==='jtwc'){ const w=storm.jtwc; if(!w) return null; const i=utc(w.init_utc); return {init:i, pts:w.points.map(x=>({t:new Date(i.getTime()+x.h*3600e3),lat:x.lat,lon:x.lon,kt:x.kt,h:x.h,rad:x.r||{}})), label:'JTWC '+fmtJ(i)+' 初期'}; }
   const m=storm.models[key]; if(!m) return null; const i=utc(m.init_utc);
   return {init:i, pts:m.points.map(x=>({t:new Date(i.getTime()+x.h*3600e3),lat:x.lat,lon:x.lon,kt:x.kt,h:x.h})), label:m.label+' '+fmtJ(i)+' 初期', stale:(Date.now()-i.getTime())>STALE_H*3600e3};
 }
+// 方位ごとの半径（km）から多角形。sectors=[[from,to,km]...]（方位は北 0°時計回り）
+function windPoly(lat,lon,sectors,opt){ const R=6371, pts=[]; for(let b=0;b<=360;b+=5){ let km=0; for(const [f,t,k] of sectors){ const bb=((b%360)+360)%360; const inSec=f<=t?(bb>=f&&bb<t):(bb>=f||bb<t); if(inSec){km=k;break;} } if(!km){pts.push(null);continue;} const br=b*Math.PI/180, la=lat*Math.PI/180, lo=lon*Math.PI/180, d=km/R; const la2=Math.asin(Math.sin(la)*Math.cos(d)+Math.cos(la)*Math.sin(d)*Math.cos(br)); const lo2=lo+Math.atan2(Math.sin(br)*Math.sin(d)*Math.cos(la),Math.cos(d)-Math.sin(la)*Math.sin(la2)); pts.push([la2*180/Math.PI,lo2*180/Math.PI]); }
+  const ll=pts.filter(Boolean); if(ll.length<3) return null; return L.polygon(ll,Object.assign({weight:1.2,fillOpacity:.12,interactive:false},opt)); }
+const JMA_SEC={'北東':[315,135],'南西':[135,315],'東':[0,180],'西':[180,360],'北':[270,90],'南':[90,270],'北西':[225,45],'南東':[45,225],'全域':[0,360]};
+function jmaSectors(list){ return (list||[]).filter(x=>x.km).map(x=>{ const r=JMA_SEC[x.area]||[0,360]; return [r[0],r[1],x.km]; }); }
+function jtwcSectors(arr){ return arr?[[0,90,arr[0]],[90,180,arr[1]],[180,270,arr[2]],[270,360,arr[3]]]:[]; }
 function interp(pts,t){ if(!pts.length) return null; if(t<=pts[0].t) return t>=pts[0].t-1 ? pts[0] : null; for(let i=1;i<pts.length;i++){ if(t<=pts[i].t){ const a=pts[i-1],b=pts[i],f=(t-a.t)/(b.t-a.t); return {lat:a.lat+(b.lat-a.lat)*f, lon:a.lon+(b.lon-a.lon)*f}; } } return null; }
 function build(){
   Object.values(layers).forEach(l=>map.removeLayer(l)); layers={}; Object.values(markers).forEach(l=>map.removeLayer(l)); markers={};
@@ -120,7 +126,11 @@ function draw(){
   document.getElementById('tlabel').textContent=fmtJ(t);
   Object.values(markers).forEach(l=>map.removeLayer(l)); markers={};
   for(const s of SRC){ if(!on[s.key]||!layers[s.key]) continue; const S=series(s.key); if(!S) continue; const p=interp(S.pts,t); if(!p) continue;
-    const m=L.circleMarker([p.lat,p.lon],{radius:7,color:'#000',weight:1.5,fillColor:s.color,fillOpacity:1}); m.addTo(map); markers[s.key]=m; }
+    const m=L.circleMarker([p.lat,p.lon],{radius:7,color:'#000',weight:1.5,fillColor:s.color,fillOpacity:1}); m.addTo(map); markers[s.key]=m;
+    // 風域：その時刻に予報点がある時だけ（気象庁＝強風域は実況のみ、暴風域／暴風警戒域、JTWC＝34kt・64kt）
+    const ex=S.pts.find(q=>Math.abs(q.t-t)<90*60e3); if(!ex) continue;
+    if(s.key==='jma'){ const g=windPoly(ex.lat,ex.lon,jmaSectors(ex.gale),{color:'#d9a400',fillColor:'#ffd84d'}); if(g){g.addTo(map);markers['jma_g']=g;} const w=windPoly(ex.lat,ex.lon,jmaSectors(ex.storm),{color:'#d93025',fillColor:'#ff6b5e'}); if(w){w.addTo(map);markers['jma_s']=w;} }
+    if(s.key==='jtwc'&&ex.rad){ const g=windPoly(ex.lat,ex.lon,jtwcSectors(ex.rad['34']),{color:'#d9a400',fillColor:'#ffd84d',dashArray:'4 4',fillOpacity:.06}); if(g){g.addTo(map);markers['jtwc_g']=g;} const w=windPoly(ex.lat,ex.lon,jtwcSectors(ex.rad['64']),{color:'#d93025',fillColor:'#ff6b5e',dashArray:'4 4',fillOpacity:.06}); if(w){w.addTo(map);markers['jtwc_s']=w;} } }
 }
 function pickStorm(i){ storm=data.storms[i]; document.getElementById('ttl').textContent=`台風${+storm.jma.number%100}号 ${storm.jma.name||''}`; document.getElementById('iss').textContent='気象庁 '+fmtJ(new Date(storm.jma.issue))+' 発表'; on={}; build(); }
 async function load(){
