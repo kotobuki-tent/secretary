@@ -10,20 +10,21 @@
 :root{--bg:#f2f2f7;--surface:#fff;--text:#1c1c1e;--dim:#6e6e73;--border:#d9d9de;--accent:#2f6fed}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
-#app{display:flex;flex-direction:column;height:100%;height:100dvh}
+#app{display:flex;flex-direction:column;height:100%;height:100dvh;position:relative}
 header{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap}
 header h1{font-size:16px;margin:0;font-weight:700}
 header .sub{color:var(--dim);font-size:12px}
 header select{border:1px solid var(--border);border-radius:8px;padding:5px 8px;font:inherit;background:#fff}
 #map{flex:1;min-height:320px}
-.bar{background:var(--surface);border-top:1px solid var(--border);padding:8px 16px 10px}
+/* 操作は地図の上に浮かぶ札（10/22 iller「下のスライダーやらチップがタスクバーみたいすぎて気づかない」）*/
+.bar{position:absolute;left:16px;bottom:16px;z-index:1000;max-width:640px;background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:16px;box-shadow:0 10px 32px rgba(0,0,0,.28);padding:12px 18px 14px}
 .time{display:flex;align-items:center;gap:12px}
-.time b{min-width:120px;font-variant-numeric:tabular-nums}
+.time b{min-width:120px;font-size:17px;font-variant-numeric:tabular-nums}
 .time input[type=range]{flex:1}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;background:#fff;user-select:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);border-radius:999px;padding:4px 11px;font-size:12px;font-weight:600;cursor:pointer;background:#f2f2f7;user-select:none}
 .chip i{width:14px;height:3px;border-radius:2px;display:inline-block}
-.chip.off{opacity:.35}
+.chip.off{opacity:.45;background:#fff;font-weight:400;border-style:dashed}
 .chip small{color:var(--dim)}
 .leaflet-container{font:inherit}
 .lbl{background:rgba(255,255,255,.9);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:11px;font-weight:700;white-space:nowrap}
@@ -33,7 +34,7 @@ header select{border:1px solid var(--border);border-radius:8px;padding:5px 8px;f
   header h1{font-size:15px;white-space:nowrap}
   header .sub{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #upd{display:none}
-  .bar{padding:6px 10px calc(8px + env(safe-area-inset-bottom))}
+  .bar{left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));max-width:none;padding:10px 12px 12px;border-radius:14px}
   .time{gap:8px}.time b{min-width:84px;font-size:13px}
   .time input[type=range]{height:28px}
   .chips{gap:4px;margin-top:6px}
@@ -42,8 +43,8 @@ header select{border:1px solid var(--border);border-radius:8px;padding:5px 8px;f
   .leaflet-control-zoom{display:none}
 }
 input[type=range]{-webkit-appearance:none;appearance:none;background:transparent}
-input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:#cfd3da}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--accent);margin-top:-10px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:#cfd3da}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:var(--accent);margin-top:-11px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 </style>
 </head>
 <body>
