@@ -129,8 +129,16 @@ function build(){
   const sl=document.getElementById('slider'); sl.max=Math.max(0,times.length-1); sl.value=0;
   const tk=document.getElementById('ticks'); tk.innerHTML=times.map((t,i)=>{ const h=t.getHours(); if(h!==0&&h!==12) return ''; const x=times.length>1?i/(times.length-1)*100:0; return h===0?`<div class="tick" style="left:${x}%">${t.getMonth()+1}/${t.getDate()}</div>`:`<div class="tick minor" style="left:${x}%"></div>`; }).join('');
   draw();
+  // 初期表示：気象庁・JTWC の進路だけに合わせ、横長の画面では西の端を進路の 2 度西（台湾が見切れる位置）に寄せる
+  //（10/22 iller「大陸はそんなにいらない」「台湾と半島が見切れてるくらいでいい」。各国モデルの線や円には合わせない）
+  const core=[]; ['jma','jtwc'].forEach(k=>{ const S=series(k); if(S) S.pts.forEach(p=>core.push([p.lat,p.lon])); });
   const all=[]; Object.entries(layers).forEach(([k,g])=>{ if(k==='__past'||!on[k])return; g.eachLayer(l=>{ if(l.getLatLngs) all.push(...l.getLatLngs().flat()); }); });
-  if(all.length) map.fitBounds(L.latLngBounds(all).pad(window.innerWidth>600?.15:.05));
+  const base=core.length?core:all;
+  if(base.length){
+    const b=L.latLngBounds(base); map.fitBounds(b.pad(.1));
+    const mb=map.getBounds(), west=b.getWest()-2;
+    if(mb.getWest()<west){ const half=(mb.getEast()-mb.getWest())/2; map.panTo([map.getCenter().lat, west+half],{animate:false}); }
+  }
 }
 function draw(){
   const t=times[+document.getElementById('slider').value]; if(!t) return;
