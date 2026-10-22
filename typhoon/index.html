@@ -159,7 +159,7 @@ async function load(){
   const pk=document.getElementById('pick'); pk.innerHTML=data.storms.map((s,i)=>`<option value="${i}">台風${+s.jma.number%100}号 ${esc(s.jma.name||'')}</option>`).join(''); pk.style.display=data.storms.length>1?'':'none'; pk.onchange=()=>pickStorm(+pk.value);
   pickStorm(0);
 }
-map=L.map('map',{zoomControl:true,attributionControl:true}).setView([25,130],5);
+map=L.map('map',{zoomControl:true,attributionControl:true,zoomSnap:0.25}).setView([25,130],5);   // zoomSnap：整数の倍率だと初期表示が広がりすぎる
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:12}).addTo(map);
 document.getElementById('slider').addEventListener('input',draw);
 load().catch(e=>{ document.getElementById('ttl').textContent='読み込めません'; });
