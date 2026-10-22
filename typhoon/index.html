@@ -77,6 +77,7 @@ const SRC=[
   {key:'CONW', label:'総合',     color:'#111',    width:3, dash:'2 6'},
 ];
 const STALE_H=36;   // これより古い初期時刻のモデルは薄く
+const DEFAULT_ON=['jma','jtwc','AEMN'];
 let data=null, storm=null, map, layers={}, markers={}, times=[], on={};
 const pad=n=>String(n).padStart(2,'0');
 const fmtJ=d=>`${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}時`;
@@ -96,7 +97,7 @@ function build(){
   if(storm.jma.past&&storm.jma.past.length){ const g=L.layerGroup([L.polyline(storm.jma.past,{color:'#555',weight:2,opacity:.6})]); g.addTo(map); layers.__past=g; }
   let tmin=null,tmax=null; const seen=new Set();
   for(const s of SRC){ if(seen.has(s.label)&&s.key!=='jma') continue; const S=series(s.key); if(!S) continue; seen.add(s.label);
-    if(on[s.key]===undefined) on[s.key]=!S.stale;
+    if(on[s.key]===undefined) on[s.key]=DEFAULT_ON.includes(s.key)&&!S.stale;   // 最初は 気象庁・米軍・GEFS 平均 の 3 本（iller 10/22）
     const g=L.layerGroup(); const ll=S.pts.map(p=>[p.lat,p.lon]);
     g.addLayer(L.polyline(ll,{color:s.color,weight:s.width,opacity:S.stale?.45:.9,dashArray:s.dash||null}));
     S.pts.forEach((p,i)=>{ if(s.key==='jma'&&p.r) g.addLayer(L.circle([p.lat,p.lon],{radius:p.r*1000,color:s.color,weight:1,opacity:.6,fillOpacity:.06,dashArray:'4 4'}));
@@ -111,7 +112,7 @@ function build(){
   // 時刻の目盛り：気象庁の実況から 3 時間刻み
   const J=series('jma'); const t0=J?J.pts[0].t:tmin; times=[]; for(let t=new Date(t0);t<=tmax;t=new Date(t.getTime()+3*3600e3)) times.push(new Date(t));
   const sl=document.getElementById('slider'); sl.max=Math.max(0,times.length-1); sl.value=0; draw();
-  const all=[]; Object.entries(layers).forEach(([k,g])=>{ if(k==='__past')return; g.eachLayer(l=>{ if(l.getLatLngs) all.push(...l.getLatLngs().flat()); }); });
+  const all=[]; Object.entries(layers).forEach(([k,g])=>{ if(k==='__past'||!on[k])return; g.eachLayer(l=>{ if(l.getLatLngs) all.push(...l.getLatLngs().flat()); }); });
   if(all.length) map.fitBounds(L.latLngBounds(all).pad(window.innerWidth>600?.15:.05));
 }
 function draw(){
