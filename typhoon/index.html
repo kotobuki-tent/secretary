@@ -135,8 +135,9 @@ function build(){
   const all=[]; Object.entries(layers).forEach(([k,g])=>{ if(k==='__past'||!on[k])return; g.eachLayer(l=>{ if(l.getLatLngs) all.push(...l.getLatLngs().flat()); }); });
   const base=core.length?core:all;
   if(base.length){
-    const b=L.latLngBounds(base); map.fitBounds(b.pad(.1),{animate:false});   // animate だと直後の getBounds が古い（倍率 5 のまま）
-    if(window.innerWidth>600) map.zoomOut(0.5,{animate:false});   // 横長は半段引いて周りを少し見せる
+    const b=L.latLngBounds(base);
+    if(window.innerWidth>600) map.setView(b.getCenter(),5.5,{animate:false});   // 横長は倍率 5.5 固定（10/22 iller「縮尺はこっちにして」）
+    else map.fitBounds(b.pad(.1),{animate:false});   // animate だと直後の getBounds が古い（倍率 5 のまま）
     const mb=map.getBounds(), west=b.getWest()-2;
     if(mb.getWest()<west){ const half=(mb.getEast()-mb.getWest())/2; map.panTo([map.getCenter().lat, west+half],{animate:false}); }
   }
