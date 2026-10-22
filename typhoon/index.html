@@ -20,7 +20,13 @@ header select{border:1px solid var(--border);border-radius:8px;padding:5px 8px;f
 .bar{position:absolute;left:16px;bottom:16px;z-index:1000;max-width:640px;background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:16px;box-shadow:0 10px 32px rgba(0,0,0,.28);padding:12px 18px 14px}
 .time{display:flex;align-items:center;gap:12px}
 .time b{min-width:120px;font-size:17px;font-variant-numeric:tabular-nums}
-.time input[type=range]{flex:1}
+.time .sl{flex:1;position:relative;padding-bottom:18px}
+.time .sl input[type=range]{display:block;width:100%;margin:0}
+/* 目盛：日付の変わり目に日付、12 時に小さな印（10/22 iller「目安の目盛」） */
+.ticks{position:absolute;left:14px;right:14px;top:26px;height:18px}
+.tick{position:absolute;top:0;transform:translateX(-50%);font-size:10px;line-height:1;color:var(--dim);white-space:nowrap;text-align:center}
+.tick::before{content:'';display:block;width:1px;height:5px;background:#9a9aa0;margin:0 auto 3px}
+.tick.minor::before{height:3px;background:#c4c4c9}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .chip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);border-radius:999px;padding:4px 11px;font-size:12px;font-weight:600;cursor:pointer;background:#f2f2f7;user-select:none}
 .chip i{width:14px;height:3px;border-radius:2px;display:inline-block}
@@ -59,7 +65,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;heigh
 </header>
 <div id="map"></div>
 <div class="bar">
-  <div class="time"><b id="tlabel">—</b><input type="range" id="slider" min="0" max="0" value="0" step="1"></div>
+  <div class="time"><b id="tlabel">—</b><div class="sl"><input type="range" id="slider" min="0" max="0" value="0" step="1"><div class="ticks" id="ticks"></div></div></div>
   <div class="chips" id="chips"></div>
 </div>
 </div>
@@ -120,7 +126,9 @@ function build(){
   }
   // 時刻の目盛り：気象庁の実況から 3 時間刻み
   const J=series('jma'); const t0=J?J.pts[0].t:tmin; times=[]; for(let t=new Date(t0);t<=tmax;t=new Date(t.getTime()+3*3600e3)) times.push(new Date(t));
-  const sl=document.getElementById('slider'); sl.max=Math.max(0,times.length-1); sl.value=0; draw();
+  const sl=document.getElementById('slider'); sl.max=Math.max(0,times.length-1); sl.value=0;
+  const tk=document.getElementById('ticks'); tk.innerHTML=times.map((t,i)=>{ const h=t.getHours(); if(h!==0&&h!==12) return ''; const x=times.length>1?i/(times.length-1)*100:0; return h===0?`<div class="tick" style="left:${x}%">${t.getMonth()+1}/${t.getDate()}</div>`:`<div class="tick minor" style="left:${x}%"></div>`; }).join('');
+  draw();
   const all=[]; Object.entries(layers).forEach(([k,g])=>{ if(k==='__past'||!on[k])return; g.eachLayer(l=>{ if(l.getLatLngs) all.push(...l.getLatLngs().flat()); }); });
   if(all.length) map.fitBounds(L.latLngBounds(all).pad(window.innerWidth>600?.15:.05));
 }
