@@ -74,8 +74,7 @@ const SRC=[
   {key:'jma',  label:'気象庁',   color:'#1a4fd6', width:4},
   {key:'jtwc', label:'米軍 JTWC', color:'#f28c1a', width:3},
   {key:'UKM',  label:'UKMET',   color:'#19a7a0', width:2.5},
-  {key:'CMC',  label:'CMC',     color:'#8e44ad', width:2.5},
-  {key:'NGX',  label:'NAVGEM',  color:'#c0392b', width:2.5},
+  // CMC・NAVGEM の単独の線は出さない（10/22 iller「平均だけにして」。単独は計算ごとに大きく振れる）
   {key:'AVNO', label:'GFS',     color:'#2e7d32', width:2.5},
   {key:'GFSO', label:'GFS',     color:'#2e7d32', width:2.5},
   {key:'EMXI', label:'ECMWF',   color:'#000',    width:2.5},
@@ -138,7 +137,7 @@ function build(){
     const b=L.latLngBounds(base);
     if(window.innerWidth>600) map.setView(b.getCenter(),5.5,{animate:false});   // 横長は倍率 5.5 固定（10/22 iller「縮尺はこっちにして」）
     else map.fitBounds(b.pad(.1),{animate:false});   // animate だと直後の getBounds が古い（倍率 5 のまま）
-    const mb=map.getBounds(), west=b.getWest()-2;
+    const mb=map.getBounds(), west=b.getWest()-8;   // 西の端は進路の一番西の点の 8 度西（10/22 iller の画面に合わせた。台湾が左寄り、半島は見える）
     if(mb.getWest()<west){ const half=(mb.getEast()-mb.getWest())/2; map.panTo([map.getCenter().lat, west+half],{animate:false}); }
   }
 }
