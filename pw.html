@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<script>(function(){try{if(!localStorage.getItem('sec_bk')){document.addEventListener('DOMContentLoaded',function(){document.body.innerHTML='<p style="font-family:sans-serif;padding:2em">鍵がありません。秘書の画面を、鍵付きの URL（?bk=…&dk=…）で一度開いてください。</p>'})}}catch(e){}})();</script>
+<script>(function(){try{var g=function(k){return localStorage.getItem(k)};if(!((g('dai_k')&&g('dai_dk'))||(g('sec_bk')&&g('sec_dk')))){document.addEventListener('DOMContentLoaded',function(){document.body.innerHTML='<p style="font-family:sans-serif;padding:2em">鍵がありません</p>'})}}catch(e){}})();</script>
 <meta charset="utf-8"><meta name="robots" content="noindex">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <!-- つなぐ先は業務管理の GAS だけ。外部のスクリプト・フォント・画像は読まない -->
@@ -9,11 +9,13 @@
 <meta name="referrer" content="no-referrer">
 <title>PW管理</title>
 <!--
-  PW管理（iller と社長専用、2026-10-02）
-  ・このファイルには鍵が2つ入っている（GAS に入るための経営の鍵と、中身を暗号にする鍵）。
-    リポジトリ・NAS・メール・チャットなど、他人が読める場所に置かない。渡すのは社長だけ。
+  PW管理（2026-10-02）。2026-11-13 から「台帳」（daicho.html）の PW タブ＝秘書・経営とは別の鍵で開く（iller・社長・遠藤未来）。
+  ・鍵はこのファイルに無い。端末の localStorage の dai_k（GAS に入る台帳の鍵＝スクリプトプロパティ LEDGER_KEY）と
+    dai_dk（中身を暗号にする鍵）。鍵付きの URL（daicho.html?lk=…&ld=…）を一度開いて覚えさせる。
+  ・経営の鍵（sec_bk・sec_dk）しか無い端末で開くと、一度だけ「台帳の鍵を作る」＝中身を新しい暗号の鍵に掛け直す。
+    これで、給料台帳（経営の鍵と古い暗号の鍵）と PW の台帳は別々の鍵になる。
   ・データは業務管理のシート pw_vault に「暗号にした文字列」で入る。シートを開いても中身は読めない。
-  ・暗号の鍵（DK）を失うと中身は取り出せない。このファイルを失くさないこと。
+  ・暗号の鍵（dai_dk）をどの端末からも失うと中身は取り出せない。メニューの「鍵の URL」で控えを取れる。
 -->
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap');
@@ -99,6 +101,7 @@ menu button:hover{background:var(--soft)}
 <menu id="menu" class="hidden">
   <li><button data-act="import">取込</button></li>
   <li><button data-act="csv">書出</button></li>
+  <li><button data-act="keyurl">鍵の URL</button></li>
 </menu></header>
 <main>
   <div class="chips" id="chips"></div>
@@ -140,8 +143,10 @@ menu button:hover{background:var(--soft)}
 <script>
 'use strict';
 const API='https://script.google.com/macros/s/AKfycbwD5F1rJcdg7pl1lnVXzyY0vttcO88z-YKUZWG3eLIT0DNMhFZw8jXbJoKW6wCIKEC7/exec';
-const KEY=(function(){try{return localStorage.getItem('sec_bk')||''}catch(e){return ''}})();   // 経営の鍵（GAS のスクリプトプロパティ BOSS_KEY）。dept=pw の読み書きが通る
-const DK=(function(){try{return localStorage.getItem('sec_dk')||''}catch(e){return ''}})();     // 中身を暗号にする鍵。GAS にもシートにも渡さない
+const LS=k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}};
+let KEY=LS('dai_k');    // 台帳の鍵（GAS のスクリプトプロパティ LEDGER_KEY）。dept=pw（PW の台帳）の読み書きだけ通る
+let DK=LS('dai_dk');    // 中身を暗号にする鍵。GAS にもシートにも渡さない
+const OLD_KEY=LS('sec_bk'), OLD_DK=LS('sec_dk');   // 経営の鍵と古い暗号の鍵（持っている端末だけ）。台帳の鍵へ移す時にだけ使う
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -155,7 +160,8 @@ let filter={q:'',cat:''}, sort={col:'cat',asc:true}, editing=null;
 
 // ---- 暗号（AES-GCM 256）----
 let _key=null;
-async function key(){return _key||(_key=await crypto.subtle.importKey('raw',unb64(DK),'AES-GCM',false,['encrypt','decrypt']))}
+const impKey=dk=>crypto.subtle.importKey('raw',unb64(dk),'AES-GCM',false,['encrypt','decrypt']);
+async function key(){return _key||(_key=await impKey(DK))}
 async function seal(list){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},await key(),enc.encode(JSON.stringify({v:1,items:list})));return 'v1.'+b64(iv)+'.'+b64(ct)}
 async function unseal(blob){const p=String(blob).split('.');if(p[0]!=='v1'||p.length!==3)throw new Error('format');const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(p[1])},await key(),unb64(p[2]));return JSON.parse(dec.decode(pt)).items||[]}
 
@@ -164,18 +170,55 @@ async function apiRead(){const r=await fetch(API+'?'+new URLSearchParams({dept:'
 async function apiSave(blob,base){const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({dept:'pw',action:'save',key:KEY,cid:CID,base,blob})});return r.json()}
 function setState(text,bad){const s=$('state');s.textContent=text;s.classList.toggle('bad',!!bad)}
 const hm=()=>new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
-function errText(j){return j&&j.error==='auth'?'鍵が通りません（このファイルが古い可能性）':j&&j.error==='too_large'?'件数が多すぎて保存できません':'保存できていません'}
+function errText(j){return j&&j.error==='auth'?'鍵が通りません':j&&j.error==='too_large'?'件数が多すぎて保存できません':'保存できていません'}
+
+// ---- 台帳の鍵へ移す（2026-11-13）----
+// 経営の鍵で今の版を読み、古い暗号の鍵で開けたら（＝まだ誰も移していない）、台帳の鍵を GAS からもらい、新しい暗号の鍵で掛け直して保存する。
+// 古い鍵で開けなければ、もう誰かが移した後＝この端末は鍵付きの URL を開く。途中で止まっても、次に開いた時に同じ鍵で続きからやる。
+async function migrate(){
+  const q=o=>fetch(API+'?'+new URLSearchParams(Object.assign({dept:'pw',key:OLD_KEY,cid:CID,t:Date.now()},o))).then(r=>r.json());
+  const ro=await q({action:'read'});if(!ro.success)throw new Error('read');
+  let list=[];
+  if(ro.blob){try{const p=String(ro.blob).split('.');const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(p[1])},await impKey(OLD_DK),unb64(p[2]));list=JSON.parse(dec.decode(pt)).items||[]}catch(e){return 'moved'}}
+  const lj=await q({action:'ledger_key'});if(!lj.success||!lj.key)throw new Error('key');
+  const ndk=DK||b64(crypto.getRandomValues(new Uint8Array(32)));
+  localStorage.setItem('dai_k',lj.key);localStorage.setItem('dai_dk',ndk);
+  if(LS('dai_k')!==lj.key||LS('dai_dk')!==ndk)throw new Error('store');
+  KEY=lj.key;DK=ndk;_key=null;
+  const sj=await apiSave(await seal(list),ro.id||'');if(!sj.success)throw new Error('save');
+  return 'ok';
+}
+function showMigrate(msg){
+  $('btnAdd').disabled=true;setState('');
+  $('list').innerHTML='<div class="empty">'+(msg?esc(msg)+'<br><br>':'')+'<button class="pri" id="btnMig">台帳の鍵を作る</button></div>';
+  $('btnMig').onclick=async()=>{
+    if(busy)return;busy=true;$('btnMig').disabled=true;setState('鍵を作っています…');
+    let r='';try{r=await migrate()}catch(e){r='ng'}finally{busy=false}
+    if(r==='ok'){toast('台帳の鍵を作りました');load()}
+    else if(r==='moved'){setState('');$('list').innerHTML='<div class="empty">この端末の鍵は古い鍵です。鍵付きの URL を開いてください</div>'}
+    else{setState('作れませんでした',true);showMigrate()}
+  };
+}
+function keyUrl(){
+  const u=new URL('daicho.html',location.href);u.search='';u.hash='';
+  const q=new URLSearchParams({lk:KEY,ld:DK});const k=LS('sec_k');if(k)q.set('k',k);
+  return u.toString()+'?'+q.toString();
+}
 
 async function load(quiet){
-  if(busy)return;busy=true;if(!quiet)setState('読み込み中…');
+  if(busy)return;
+  if(!KEY||!DK){if(OLD_KEY&&OLD_DK)showMigrate();return}
+  busy=true;if(!quiet)setState('読み込み中…');
   try{
     const j=await apiRead();
-    if(!j.success){setState(j.error==='auth'?'鍵が通りません（このファイルが古い可能性）':'読み込めません',true);if(!loaded)$('list').innerHTML='<div class="empty">読み込めませんでした。「更新」を押してください</div>';return}
+    if(!j.success){setState(j.error==='auth'?'鍵が通りません':'読み込めません',true);if(!loaded)$('list').innerHTML='<div class="empty">読み込めませんでした。「更新」を押してください</div>';return}
     items=j.blob?await unseal(j.blob):[];ver=j.id||'';loaded=true;lastLoad=Date.now();failedOp=null;
     $('btnAdd').disabled=false;setState('読み込み '+hm());render();
   }catch(e){
-    setState(e&&e.message==='format'||e instanceof DOMException?'暗号を開けません（鍵が違うファイル）':'つながりません',true);
+    const badKey=e&&e.message==='format'||e instanceof DOMException;
+    setState(badKey?'暗号を開けません（鍵が違います）':'つながりません',true);
     if(!loaded)$('list').innerHTML='<div class="empty">読み込めませんでした。ネットにつながっているか確かめて「更新」を押してください</div>';
+    if(badKey&&!loaded&&OLD_KEY&&OLD_DK){busy=false;showMigrate('台帳の鍵で開けませんでした');return}
   }finally{busy=false}
 }
 // 変更は「操作」として持ち、相手が先に保存していたら最新を読み直して同じ操作をやり直す
@@ -287,7 +330,7 @@ $('edDel').onclick=async()=>{if(!editing||!confirm('「'+(editing.name||editing.
 // ---- メニュー ----
 $('btnMenu').onclick=e=>{e.stopPropagation();$('menu').classList.toggle('hidden')};
 addEventListener('click',()=>$('menu').classList.add('hidden'));
-$('menu').onclick=e=>{const a=e.target.closest('[data-act]');if(!a)return;if(!loaded){toast('読み込んでからにしてください');return}if(a.dataset.act==='import')openImport();if(a.dataset.act==='csv')exportCsv()};
+$('menu').onclick=e=>{const a=e.target.closest('[data-act]');if(!a)return;if(!loaded){toast('読み込んでからにしてください');return}if(a.dataset.act==='import')openImport();if(a.dataset.act==='csv')exportCsv();if(a.dataset.act==='keyurl')copy(keyUrl(),'鍵の URL')};
 function exportCsv(){
   if(!confirm('一覧を CSV に書き出します。パスワードがそのまま読めるファイルになります。続けますか？'))return;
   const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
@@ -363,7 +406,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('dlgEdit').classList.c
   if(e.key==='/'&&!/input|textarea|select/i.test(document.activeElement.tagName)){e.preventDefault();$('q').focus()}});
 
 if(!(window.crypto&&crypto.subtle)){setState('このブラウザでは開けません（Chrome か Edge の新しい版で開く）',true);$('list').innerHTML=''}
-else if(KEY&&DK)load();
+else if((KEY&&DK)||(OLD_KEY&&OLD_DK))load();
 </script>
 </body>
 </html>
